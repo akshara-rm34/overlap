@@ -1,0 +1,17 @@
+rules_version = '2';
+
+// Temporary rules for step 1 (emulator only). Full rules + tests come in step 7.
+service cloud.firestore {
+  match /databases/{database}/documents {
+    match /users/{uid} {
+      allow read: if request.auth != null;
+      // On create, the server-only fields must start empty.
+      allow create: if request.auth.uid == uid
+        && request.resource.data.verified == false
+        && request.resource.data.verificationMethod == null
+        && request.resource.data.company == null
+        && request.resource.data.verifiedAt == null
+        && request.resource.data.participantId == null;
+    }
+  }
+}
