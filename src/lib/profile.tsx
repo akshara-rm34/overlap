@@ -7,11 +7,8 @@ import { auth, db } from './firebase';
 
 export type OfferLetterStatus = 'none' | 'pending' | 'approved' | 'rejected';
 
-export const CITIES = ['Atlanta', 'Seattle'] as const;
-export type City = (typeof CITIES)[number];
-
 export type Stay = {
-  city: City;
+  city: string; // "City, ST" from src/lib/cities.ts
   startDate: string; // YYYY-MM-DD
   endDate: string;
   budgetMin: number;

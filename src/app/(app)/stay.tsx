@@ -4,10 +4,11 @@ import { StyleSheet, Text, View } from 'react-native';
 
 import { Button } from '@/components/Button';
 import { DateField } from '@/components/DateField';
-import { OptionGroup } from '@/components/OptionGroup';
+import { CityField } from '@/components/CityField';
 import { Screen } from '@/components/Screen';
 import { TextField } from '@/components/TextField';
-import { BIO_MAX, CITIES, saveStay, useProfile, type City } from '@/lib/profile';
+import { isKnownCity } from '@/lib/cities';
+import { BIO_MAX, saveStay, useProfile } from '@/lib/profile';
 import { colors, space, type } from '@/lib/theme';
 
 function parseDollars(s: string): number {
@@ -19,7 +20,8 @@ export default function StayScreen() {
   const editing = edit === '1';
   const { profile } = useProfile();
 
-  const [city, setCity] = useState<City | null>(profile?.city ?? null);
+  // Older profiles may have a city that's not in the list; those have to pick again.
+  const [city, setCity] = useState<string | null>(isKnownCity(profile?.city) ? profile.city : null);
   const [startDate, setStartDate] = useState<string | null>(profile?.startDate ?? null);
   const [endDate, setEndDate] = useState<string | null>(profile?.endDate ?? null);
   const [budgetMin, setBudgetMin] = useState(profile?.budgetMin ? String(profile.budgetMin) : '');
@@ -29,7 +31,7 @@ export default function StayScreen() {
   const [busy, setBusy] = useState(false);
 
   function validate(): string | null {
-    if (!city) return 'Pick a city.';
+    if (!city) return 'Pick your city from the list.';
     if (!startDate || !endDate) return 'Add your start and end dates.';
     if (endDate <= startDate) return 'End date has to be after the start date.';
     const min = parseDollars(budgetMin);
@@ -73,12 +75,7 @@ export default function StayScreen() {
         We’ll show roommate-seekers whose dates overlap with yours.
       </Text>
 
-      <OptionGroup
-        label="City"
-        options={CITIES.map((c) => ({ value: c, label: c }))}
-        value={city}
-        onChange={setCity}
-      />
+      <CityField value={city} onChange={setCity} />
       <DateField label="Start date" value={startDate} onChange={setStartDate} />
       <DateField
         label="End date"
