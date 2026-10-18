@@ -6,6 +6,7 @@
     "@react-native-async-storage/async-storage": "2.2.0",
     "expo": "~57.0.30",
     "expo-constants": "~57.0.22",
+    "expo-document-picker": "~57.0.3",
     "expo-linking": "~57.0.13",
     "expo-router": "~57.0.28",
     "expo-status-bar": "~57.0.1",
@@ -30,8 +31,9 @@
     "ios": "expo start --ios",
     "web": "expo start --web",
     "typecheck": "tsc --noEmit",
-    "emulators": "firebase emulators:start --import=./emulator-data --export-on-exit=./emulator-data",
-    "lint": "expo lint"
+    "emulators": "npm --prefix functions run build && firebase emulators:start --import=./emulator-data --export-on-exit=./emulator-data",
+    "lint": "expo lint",
+    "functions:watch": "npm --prefix functions run build:watch"
   },
   "private": true
 }

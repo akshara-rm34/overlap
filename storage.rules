@@ -1,0 +1,14 @@
+rules_version = '2';
+
+service firebase.storage {
+  match /b/{bucket}/o {
+    // Offer letters: the owner can upload a PDF or image up to 10 MB. Nobody reads from the app.
+    match /offerLetters/{uid}/{file} {
+      allow create, update: if request.auth != null
+        && request.auth.uid == uid
+        && request.resource.size <= 10 * 1024 * 1024
+        && (request.resource.contentType == 'application/pdf'
+            || request.resource.contentType.matches('image/.*'));
+    }
+  }
+}

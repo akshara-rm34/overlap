@@ -1,5 +1,41 @@
 import { Stack } from 'expo-router';
+import { ActivityIndicator, View } from 'react-native';
+
+import { ProfileProvider, useProfile } from '@/lib/profile';
+import { colors } from '@/lib/theme';
+
+function AppStack() {
+  const { profile, offerLetterStatus, loading, verifySkipped } = useProfile();
+
+  if (loading) {
+    return (
+      <View style={{ flex: 1, alignItems: 'center', justifyContent: 'center', backgroundColor: colors.bg }}>
+        <ActivityIndicator color={colors.primary} />
+      </View>
+    );
+  }
+
+  // Verify screens close once the user is verified or has an offer letter pending.
+  // Unverified users see them first, but can skip and come back from home.
+  const canVerify = !profile?.verified && offerLetterStatus !== 'pending';
+  const canUseApp = !canVerify || verifySkipped;
+
+  return (
+    <Stack screenOptions={{ headerShown: false }}>
+      <Stack.Protected guard={canVerify}>
+        <Stack.Screen name="verify" />
+      </Stack.Protected>
+      <Stack.Protected guard={canUseApp}>
+        <Stack.Screen name="index" />
+      </Stack.Protected>
+    </Stack>
+  );
+}
 
 export default function AppLayout() {
-  return <Stack screenOptions={{ headerShown: false }} />;
+  return (
+    <ProfileProvider>
+      <AppStack />
+    </ProfileProvider>
+  );
 }
