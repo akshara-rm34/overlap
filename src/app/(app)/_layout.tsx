@@ -1,19 +1,11 @@
 import { Stack } from 'expo-router';
-import { ActivityIndicator, View } from 'react-native';
 
+import { Loading } from '@/components/Loading';
 import { ProfileProvider, useProfile } from '@/lib/profile';
-import { colors } from '@/lib/theme';
 
 function AppStack() {
   const { profile, offerLetterStatus, loading, verifySkipped } = useProfile();
-
-  if (loading) {
-    return (
-      <View style={{ flex: 1, alignItems: 'center', justifyContent: 'center', backgroundColor: colors.bg }}>
-        <ActivityIndicator color={colors.primary} />
-      </View>
-    );
-  }
+  if (loading) return <Loading />;
 
   // Verify screens close once the user is verified or has an offer letter pending.
   // Unverified users see them first, but can skip and come back from home.
@@ -27,6 +19,9 @@ function AppStack() {
       </Stack.Protected>
       <Stack.Protected guard={canUseApp}>
         <Stack.Screen name="index" />
+        <Stack.Screen name="stay" />
+        <Stack.Screen name="checklist" />
+        <Stack.Screen name="profile" />
       </Stack.Protected>
     </Stack>
   );

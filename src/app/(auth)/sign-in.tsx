@@ -1,12 +1,12 @@
-import { Link } from 'expo-router';
+import { router } from 'expo-router';
 import { useState } from 'react';
-import { StyleSheet, Text } from 'react-native';
+import { Pressable, StyleSheet, Text } from 'react-native';
 
 import { Button } from '@/components/Button';
 import { Screen } from '@/components/Screen';
 import { TextField } from '@/components/TextField';
 import { authErrorMessage, signIn } from '@/lib/auth';
-import { colors, space } from '@/lib/theme';
+import { space, type } from '@/lib/theme';
 
 export default function SignIn() {
   const [email, setEmail] = useState('');
@@ -26,8 +26,10 @@ export default function SignIn() {
   }
 
   return (
-    <Screen>
-      <Text style={styles.title}>Sign in</Text>
+    <Screen
+      back={{ label: 'Back', onPress: () => router.back() }}
+      footer={<Button title="Sign in" onPress={onSubmit} loading={busy} />}>
+      <Text style={[type.h1, styles.title]}>Sign in</Text>
       <TextField
         label="Email"
         value={email}
@@ -43,17 +45,15 @@ export default function SignIn() {
         secureTextEntry
         autoComplete="current-password"
       />
-      {error && <Text style={styles.error}>{error}</Text>}
-      <Button title="Sign in" onPress={onSubmit} loading={busy} />
-      <Link href="/sign-up" replace style={styles.link}>
-        New here? Create an account
-      </Link>
+      {error && <Text style={type.error}>{error}</Text>}
+      <Pressable onPress={() => router.replace('/sign-up')} style={styles.switch}>
+        <Text style={type.link}>New here? Create an account</Text>
+      </Pressable>
     </Screen>
   );
 }
 
 const styles = StyleSheet.create({
-  title: { fontSize: 28, fontWeight: '700', color: colors.text, marginBottom: space.lg },
-  error: { color: colors.error, marginBottom: space.sm },
-  link: { color: colors.primary, textAlign: 'center', marginTop: space.lg, fontSize: 15 },
+  title: { marginBottom: space.lg },
+  switch: { marginTop: space.md },
 });

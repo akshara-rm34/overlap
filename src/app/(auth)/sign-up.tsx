@@ -1,12 +1,12 @@
-import { Link } from 'expo-router';
+import { router } from 'expo-router';
 import { useState } from 'react';
-import { StyleSheet, Text } from 'react-native';
+import { Pressable, StyleSheet, Text } from 'react-native';
 
 import { Button } from '@/components/Button';
 import { Screen } from '@/components/Screen';
 import { TextField } from '@/components/TextField';
 import { authErrorMessage, signUp } from '@/lib/auth';
-import { colors, space } from '@/lib/theme';
+import { space, type } from '@/lib/theme';
 
 export default function SignUp() {
   const [name, setName] = useState('');
@@ -32,10 +32,12 @@ export default function SignUp() {
   }
 
   return (
-    <Screen>
-      <Text style={styles.title}>Create account</Text>
-      <Text style={styles.hint}>
-        Any email works here. You’ll verify your work email in the next step.
+    <Screen
+      back={{ label: 'Back', onPress: () => router.back() }}
+      footer={<Button title="Create account" onPress={onSubmit} loading={busy} />}>
+      <Text style={type.h1}>Create account</Text>
+      <Text style={[type.body, styles.intro]}>
+        Any email works here. You’ll verify your work email next.
       </Text>
       <TextField label="First name" value={name} onChangeText={setName} autoComplete="given-name" />
       <TextField
@@ -53,18 +55,15 @@ export default function SignUp() {
         secureTextEntry
         autoComplete="new-password"
       />
-      {error && <Text style={styles.error}>{error}</Text>}
-      <Button title="Create account" onPress={onSubmit} loading={busy} />
-      <Link href="/sign-in" replace style={styles.link}>
-        Already have an account? Sign in
-      </Link>
+      {error && <Text style={type.error}>{error}</Text>}
+      <Pressable onPress={() => router.replace('/sign-in')} style={styles.switch}>
+        <Text style={type.link}>Already have an account? Sign in</Text>
+      </Pressable>
     </Screen>
   );
 }
 
 const styles = StyleSheet.create({
-  title: { fontSize: 28, fontWeight: '700', color: colors.text },
-  hint: { fontSize: 15, color: colors.muted, marginTop: space.xs, marginBottom: space.lg },
-  error: { color: colors.error, marginBottom: space.sm },
-  link: { color: colors.primary, textAlign: 'center', marginTop: space.lg, fontSize: 15 },
+  intro: { marginTop: space.sm, marginBottom: space.lg },
+  switch: { marginTop: space.md },
 });

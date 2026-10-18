@@ -1,13 +1,15 @@
+import Feather from '@expo/vector-icons/Feather';
 import * as DocumentPicker from 'expo-document-picker';
+import { router } from 'expo-router';
 import { useState } from 'react';
-import { StyleSheet, Text, View } from 'react-native';
+import { Pressable, StyleSheet, Text } from 'react-native';
 
 import { Button } from '@/components/Button';
 import { Screen } from '@/components/Screen';
-import { colors, space } from '@/lib/theme';
+import { colors, fonts, radius, space, type } from '@/lib/theme';
 import { MAX_OFFER_LETTER_BYTES, uploadOfferLetter } from '@/lib/verification';
 
-type Picked = { uri: string; name: string; mimeType: string; size?: number };
+type Picked = { uri: string; name: string; mimeType: string };
 
 export default function OfferLetter() {
   const [file, setFile] = useState<Picked | null>(null);
@@ -26,12 +28,7 @@ export default function OfferLetter() {
       setError('That file is over 10 MB. Try a smaller PDF or a photo.');
       return;
     }
-    setFile({
-      uri: asset.uri,
-      name: asset.name,
-      mimeType: asset.mimeType ?? 'application/pdf',
-      size: asset.size,
-    });
+    setFile({ uri: asset.uri, name: asset.name, mimeType: asset.mimeType ?? 'application/pdf' });
   }
 
   async function onUpload() {
@@ -48,35 +45,41 @@ export default function OfferLetter() {
   }
 
   return (
-    <Screen>
-      <Text style={styles.title}>Upload your offer letter</Text>
-      <Text style={styles.body}>
+    <Screen
+      back={{ label: 'Back', onPress: () => router.back() }}
+      footer={
+        <Button title="Upload for review" onPress={onUpload} loading={busy} disabled={!file} />
+      }>
+      <Text style={type.h1}>Upload your offer letter</Text>
+      <Text style={[type.body, styles.intro]}>
         No work email yet? Upload your offer letter (PDF or photo). Someone on the Overlap team
         checks it by hand, usually within a day. We delete the letter after review and only keep
         your company name.
       </Text>
-      <View style={styles.fileBox}>
-        <Text style={file ? styles.fileName : styles.muted}>{file ? file.name : 'No file chosen'}</Text>
-      </View>
-      {error && <Text style={styles.error}>{error}</Text>}
-      <Button title={file ? 'Choose a different file' : 'Choose file'} variant="secondary" onPress={onPick} />
-      <Button title="Upload for review" onPress={onUpload} loading={busy} disabled={!file} />
+      <Pressable onPress={onPick} style={styles.drop}>
+        <Feather name={file ? 'file-text' : 'upload'} size={20} color={colors.text} />
+        <Text style={styles.dropText} numberOfLines={1}>
+          {file ? file.name : 'Choose a PDF or photo'}
+        </Text>
+        {file && <Text style={type.small}>Tap to change</Text>}
+      </Pressable>
+      {error && <Text style={[type.error, styles.error]}>{error}</Text>}
     </Screen>
   );
 }
 
 const styles = StyleSheet.create({
-  title: { fontSize: 28, fontWeight: '700', color: colors.text },
-  body: { fontSize: 15, color: colors.muted, marginTop: space.sm, marginBottom: space.lg, lineHeight: 21 },
-  fileBox: {
+  intro: { marginTop: space.sm, marginBottom: space.lg },
+  drop: {
     borderWidth: 1,
     borderColor: colors.border,
     borderStyle: 'dashed',
-    borderRadius: 10,
-    padding: space.md,
-    marginBottom: space.sm,
+    borderRadius: radius,
+    paddingVertical: space.xl,
+    paddingHorizontal: space.md,
+    alignItems: 'center',
+    gap: space.sm,
   },
-  fileName: { color: colors.text, fontSize: 15 },
-  muted: { color: colors.muted, fontSize: 15 },
-  error: { color: colors.error, marginBottom: space.sm },
+  dropText: { fontFamily: fonts.medium, fontSize: 14, color: colors.text },
+  error: { marginTop: space.sm },
 });

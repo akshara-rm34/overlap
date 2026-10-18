@@ -12,6 +12,10 @@ service cloud.firestore {
         && request.resource.data.company == null
         && request.resource.data.verifiedAt == null
         && request.resource.data.participantId == null;
+      // The owner can edit their profile, but not the server-only fields.
+      allow update: if request.auth.uid == uid
+        && !request.resource.data.diff(resource.data).affectedKeys()
+            .hasAny(['verified', 'verificationMethod', 'company', 'verifiedAt', 'participantId']);
     }
 
     match /private/{uid} {

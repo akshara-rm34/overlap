@@ -1,20 +1,18 @@
+import {
+  Inter_400Regular,
+  Inter_500Medium,
+  Inter_600SemiBold,
+  useFonts,
+} from '@expo-google-fonts/inter';
 import { Stack } from 'expo-router';
 import { StatusBar } from 'expo-status-bar';
-import { ActivityIndicator, View } from 'react-native';
 
+import { Loading } from '@/components/Loading';
 import { AuthProvider, useAuth } from '@/lib/auth';
-import { colors } from '@/lib/theme';
 
 function RootStack() {
   const { user, loading } = useAuth();
-
-  if (loading) {
-    return (
-      <View style={{ flex: 1, alignItems: 'center', justifyContent: 'center', backgroundColor: colors.bg }}>
-        <ActivityIndicator color={colors.primary} />
-      </View>
-    );
-  }
+  if (loading) return <Loading />;
 
   return (
     <Stack screenOptions={{ headerShown: false }}>
@@ -29,6 +27,9 @@ function RootStack() {
 }
 
 export default function RootLayout() {
+  const [fontsLoaded] = useFonts({ Inter_400Regular, Inter_500Medium, Inter_600SemiBold });
+  if (!fontsLoaded) return <Loading />;
+
   return (
     <AuthProvider>
       <StatusBar style="dark" />

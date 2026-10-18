@@ -58,7 +58,11 @@ npx expo lint
 
 ## Project layout
 
-- `src/app/` routes (Expo Router). `(auth)` = welcome, sign in, sign up. `(app)` = signed-in screens.
+- `src/app/` routes (Expo Router). `(auth)` = welcome, sign in, sign up. `(app)` = signed-in screens:
+  `verify/` (work email, code, offer letter), `stay` (city, dates, budget, bio), `checklist`, `profile`,
+  and `index` (home, which sends new users through stay and checklist first).
+- `src/components/` shared UI. `src/lib/theme.ts` has the colors and fonts from the Figma prototype.
+- `src/lib/checklist.ts` the five checklist questions and how answers read on a profile.
 - `src/lib/firebase.ts` Firebase setup and emulator connection.
 - `src/lib/auth.tsx` auth state and sign up / sign in / sign out.
 - `src/lib/profile.tsx` live profile + verification status for the signed-in user.
