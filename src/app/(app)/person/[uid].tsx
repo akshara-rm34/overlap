@@ -1,7 +1,6 @@
 import Feather from '@expo/vector-icons/Feather';
 import { router, useLocalSearchParams } from 'expo-router';
-import { doc, onSnapshot } from 'firebase/firestore';
-import { useEffect, useState } from 'react';
+import { useState } from 'react';
 import { Pressable, StyleSheet, Text, View } from 'react-native';
 
 import { Avatar } from '@/components/Avatar';
@@ -13,20 +12,12 @@ import { OverlapPill } from '@/components/OverlapPill';
 import { Screen } from '@/components/Screen';
 import { VerifiedPill } from '@/components/VerifiedPill';
 import { useAuth } from '@/lib/auth';
+import { convIdFor } from '@/lib/chat';
 import { formatDate, formatRange } from '@/lib/dates';
-import { db } from '@/lib/firebase';
-import type { Match } from '@/lib/matches';
-import { useProfile, type Profile } from '@/lib/profile';
+import { useMatch } from '@/lib/matches';
+import { useProfile } from '@/lib/profile';
 import { colors, fonts, radius, space, type } from '@/lib/theme';
-
-function useDoc<T>(path: string | null) {
-  const [data, setData] = useState<T | null | undefined>(undefined);
-  useEffect(() => {
-    if (!path) return;
-    return onSnapshot(doc(db, path), (snap) => setData(snap.exists() ? (snap.data() as T) : null));
-  }, [path]);
-  return data;
-}
+import { useUserProfile } from '@/lib/useUserProfile';
 
 function money(n: number) {
   return `$${n.toLocaleString('en-US')}`;
@@ -36,8 +27,8 @@ export default function PersonProfile() {
   const { uid } = useLocalSearchParams<{ uid: string }>();
   const { user } = useAuth();
   const { profile: me } = useProfile();
-  const person = useDoc<Profile>(uid ? `users/${uid}` : null);
-  const match = useDoc<Match>(user && uid ? `matches/${user.uid}/items/${uid}` : null);
+  const person = useUserProfile(uid);
+  const match = useMatch(uid);
   const [showBadge, setShowBadge] = useState(false);
 
   if (person === undefined || match === undefined) return <Loading />;
@@ -55,8 +46,15 @@ export default function PersonProfile() {
     <Screen
       back={back}
       footer={
-        // TODO step 6: open the conversation.
-        <Button title="Message" onPress={() => {}} disabled />
+        <Button
+          title="Message"
+          onPress={() =>
+            router.push({
+              pathname: '/chat/[convId]',
+              params: { convId: convIdFor(user!.uid, uid) },
+            })
+          }
+        />
       }>
       <View style={styles.head}>
         <Avatar name={person.displayName} size={88} />

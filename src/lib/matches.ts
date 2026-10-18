@@ -50,3 +50,16 @@ export function useMatches() {
     : null;
   return withProfiles;
 }
+
+// The signed-in user's match with one person. undefined while loading, null if not matched.
+export function useMatch(otherUid: string | null | undefined) {
+  const { user } = useAuth();
+  const [match, setMatch] = useState<Match | null | undefined>(undefined);
+  useEffect(() => {
+    if (!user || !otherUid) return;
+    return onSnapshot(doc(db, 'matches', user.uid, 'items', otherUid), (snap) =>
+      setMatch(snap.exists() ? (snap.data() as Match) : null),
+    );
+  }, [user, otherUid]);
+  return match;
+}

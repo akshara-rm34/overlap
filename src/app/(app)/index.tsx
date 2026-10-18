@@ -63,14 +63,25 @@ export default function Home() {
   if (!profile?.startDate || !profile.endDate || !profile.city) return <Redirect href="/stay" />;
   if (!profile.checklist && !checklistSkipped) return <Redirect href="/checklist" />;
 
-  const profileButton = (
-    <Pressable onPress={() => router.push('/profile')} hitSlop={8} accessibilityLabel="My profile">
-      <Feather name="user" size={20} color={colors.text} />
-    </Pressable>
+  const headerButtons = (
+    <View style={styles.headerButtons}>
+      <Pressable
+        onPress={() => router.push('/conversations')}
+        hitSlop={8}
+        accessibilityLabel="Messages">
+        <Feather name="message-circle" size={20} color={colors.text} />
+      </Pressable>
+      <Pressable
+        onPress={() => router.push('/profile')}
+        hitSlop={8}
+        accessibilityLabel="My profile">
+        <Feather name="user" size={20} color={colors.text} />
+      </Pressable>
+    </View>
   );
 
   return (
-    <Screen headerRight={profileButton}>
+    <Screen headerRight={headerButtons}>
       <Text style={type.h1}>Roommate matches</Text>
       <Text style={[type.body, styles.sub]}>
         {profile.city} · {formatRange(profile.startDate, profile.endDate)} · Up to $
@@ -104,6 +115,7 @@ export default function Home() {
 }
 
 const styles = StyleSheet.create({
+  headerButtons: { flexDirection: 'row', gap: 20 },
   sub: { marginTop: space.xs, marginBottom: space.lg },
   notice: { backgroundColor: colors.card, borderRadius: radius, padding: space.md, gap: space.sm },
   spinner: { marginTop: space.xl },

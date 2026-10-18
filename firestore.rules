@@ -27,6 +27,49 @@ service cloud.firestore {
       allow read: if request.auth.uid == uid;
     }
 
+    // convId is the two uids sorted and joined with "_", so it says who's in the conversation
+    // even before the document exists.
+    function inConv(convId) {
+      return request.auth != null && request.auth.uid in convId.split('_');
+    }
+
+    match /conversations/{convId} {
+      allow get: if inConv(convId);
+      allow list: if request.auth.uid in resource.data.participants;
+
+      // Only people who are matched can start a conversation.
+      allow create: if inConv(convId)
+        && request.resource.data.keys().hasOnly(
+            ['participants', 'overlapType', 'createdBy', 'createdAt', 'lastMessageAt',
+             'lastMessageText', 'lastSenderId', 'updatedAt'])
+        && request.resource.data.participants.size() == 2
+        && convId == request.resource.data.participants[0] + '_' + request.resource.data.participants[1]
+        && request.resource.data.createdBy == request.auth.uid
+        && request.resource.data.overlapType == get(/databases/$(database)/documents/matches/$(request.auth.uid)/items/$(otherIn(convId))).data.overlapType;
+
+      // Participants only bump the "last message" fields.
+      allow update: if request.auth.uid in resource.data.participants
+        && request.resource.data.diff(resource.data).affectedKeys()
+            .hasOnly(['lastMessageAt', 'lastMessageText', 'lastSenderId', 'updatedAt']);
+
+      // Messages can't be edited or deleted.
+      match /messages/{msgId} {
+        allow read: if inConv(convId);
+        allow create: if inConv(convId)
+          && existsAfter(/databases/$(database)/documents/conversations/$(convId))
+          && request.resource.data.keys().hasOnly(['senderId', 'text', 'sentAt'])
+          && request.resource.data.senderId == request.auth.uid
+          && request.resource.data.text is string
+          && request.resource.data.text.size() > 0
+          && request.resource.data.text.size() <= 2000
+          && request.resource.data.sentAt == request.time;
+      }
+    }
+
+    function otherIn(convId) {
+      return convId.split('_')[0] == request.auth.uid ? convId.split('_')[1] : convId.split('_')[0];
+    }
+
     // verificationCodes: no client access (no rule = denied).
   }
 }

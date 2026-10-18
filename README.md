@@ -42,7 +42,9 @@ npm run seed -- --remove  # deletes them
 ```
 
 Set your stay to around Jun 7 – Aug 27, 2027 in either city to see a mix of full and partial
-overlaps. The seed script only talks to the emulators. Never put fake profiles in the real project.
+overlaps. To test chat from both sides, sign out and sign in as a seed user
+(`seed-atl-01@example.com` etc., password in the comment at the top of `scripts/seed-emulator.ts`).
+The seed script only talks to the emulators. Never put fake profiles in the real project.
 
 ## Verification emails
 
@@ -76,6 +78,8 @@ npx expo lint
 - `src/components/` shared UI. `src/lib/theme.ts` has the colors and fonts from the Figma prototype.
 - `src/lib/checklist.ts` the five checklist questions and how answers read on a profile.
 - `src/lib/matches.ts` live matches for the signed-in user.
+- `src/lib/chat.ts` conversations and messages. A conversation's id is the two uids sorted and
+  joined with `_`. It's created with the first message, and only between matched users.
 - `functions/src/matching.ts` `computeMatches`: rebuilds matches when a user's city, dates, or
   verified flag change. The overlap math is in `functions/src/overlap.ts`.
 - `scripts/` seed script (and later the analysis scripts).
