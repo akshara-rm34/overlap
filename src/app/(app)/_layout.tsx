@@ -22,6 +22,7 @@ function AppStack() {
         <Stack.Screen name="stay" />
         <Stack.Screen name="checklist" />
         <Stack.Screen name="profile" />
+        <Stack.Screen name="person/[uid]" />
       </Stack.Protected>
     </Stack>
   );

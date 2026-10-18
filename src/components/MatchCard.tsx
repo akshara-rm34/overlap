@@ -1,4 +1,6 @@
-import { StyleSheet, Text, View } from 'react-native';
+import Feather from '@expo/vector-icons/Feather';
+import { router } from 'expo-router';
+import { Pressable, StyleSheet, Text, View } from 'react-native';
 
 import { formatRange } from '@/lib/dates';
 import type { MatchWithProfile } from '@/lib/matches';
@@ -22,7 +24,9 @@ export function MatchCard({ match }: { match: MatchWithProfile }) {
   if (!p) return null;
 
   return (
-    <View style={styles.card}>
+    <Pressable
+      onPress={() => router.push({ pathname: '/person/[uid]', params: { uid: match.otherUid } })}
+      style={({ pressed }) => [styles.card, pressed && styles.pressed]}>
       <View style={styles.head}>
         <Avatar name={p.displayName} />
         <View style={styles.headText}>
@@ -30,6 +34,7 @@ export function MatchCard({ match }: { match: MatchWithProfile }) {
           {p.company && <Text style={styles.company}>{p.company}</Text>}
           {p.verified && <VerifiedPill />}
         </View>
+        <Feather name="chevron-right" size={18} color={colors.faint} />
       </View>
       <View style={styles.divider} />
       <View style={styles.grid}>
@@ -49,7 +54,7 @@ export function MatchCard({ match }: { match: MatchWithProfile }) {
           Overlap: {formatRange(match.overlapStart, match.overlapEnd)}, {match.overlapDays} days
         </Text>
       </View>
-    </View>
+    </Pressable>
   );
 }
 
@@ -60,6 +65,7 @@ const styles = StyleSheet.create({
     padding: space.md,
     marginBottom: 12,
   },
+  pressed: { opacity: 0.7 },
   head: { flexDirection: 'row', gap: space.md },
   headText: { flex: 1, gap: 4 },
   name: { fontFamily: fonts.semibold, fontSize: 15, color: colors.text },
