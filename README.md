@@ -32,6 +32,18 @@ Emulator data is saved to `emulator-data/` when you stop the emulators and loade
 `npm run emulators` builds the functions once on start. If you change code in `functions/`, run
 `npm run functions:watch` in a third terminal so the emulator picks up changes.
 
+## Test data (emulator only)
+
+With the emulators running:
+
+```bash
+npm run seed              # adds 11 fake users in Seattle, WA and Atlanta, GA
+npm run seed -- --remove  # deletes them
+```
+
+Set your stay to around Jun 7 – Aug 27, 2027 in either city to see a mix of full and partial
+overlaps. The seed script only talks to the emulators. Never put fake profiles in the real project.
+
 ## Verification emails
 
 The functions send codes through `sendEmail()` in `functions/src/email.ts`. Pick the provider in `functions/.env` (copy it from `functions/.env.example`):
@@ -63,6 +75,10 @@ npx expo lint
   and `index` (home, which sends new users through stay and checklist first).
 - `src/components/` shared UI. `src/lib/theme.ts` has the colors and fonts from the Figma prototype.
 - `src/lib/checklist.ts` the five checklist questions and how answers read on a profile.
+- `src/lib/matches.ts` live matches for the signed-in user.
+- `functions/src/matching.ts` `computeMatches`: rebuilds matches when a user's city, dates, or
+  verified flag change. The overlap math is in `functions/src/overlap.ts`.
+- `scripts/` seed script (and later the analysis scripts).
 - `src/lib/firebase.ts` Firebase setup and emulator connection.
 - `src/lib/auth.tsx` auth state and sign up / sign in / sign out.
 - `src/lib/profile.tsx` live profile + verification status for the signed-in user.

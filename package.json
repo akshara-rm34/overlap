@@ -26,6 +26,7 @@
     "@types/react": "~19.2.4",
     "eslint": "^9.0.0",
     "eslint-config-expo": "~57.0.2",
+    "firebase-admin": "^14.5.0",
     "firebase-tools": "^15.34.0",
     "typescript": "~6.0.3"
   },
@@ -37,7 +38,8 @@
     "typecheck": "tsc --noEmit",
     "emulators": "npm --prefix functions run build && firebase emulators:start --import=./emulator-data --export-on-exit=./emulator-data",
     "lint": "expo lint",
-    "functions:watch": "npm --prefix functions run build:watch"
+    "functions:watch": "npm --prefix functions run build:watch",
+    "seed": "node scripts/seed-emulator.ts"
   },
   "private": true
 }

@@ -1,20 +1,66 @@
 import Feather from '@expo/vector-icons/Feather';
 import { Redirect, router } from 'expo-router';
-import { Pressable, StyleSheet, Text, View } from 'react-native';
+import { ActivityIndicator, Pressable, StyleSheet, Text, View } from 'react-native';
 
 import { Button } from '@/components/Button';
+import { MatchCard } from '@/components/MatchCard';
 import { Screen } from '@/components/Screen';
-import { VerifiedPill } from '@/components/VerifiedPill';
 import { formatRange } from '@/lib/dates';
+import { useMatches } from '@/lib/matches';
 import { useProfile } from '@/lib/profile';
 import { colors, radius, space, type } from '@/lib/theme';
 
-// Home. Sends new users through stay details and the checklist first.
-// Step 4 replaces the placeholder below with the live matches list.
+function Notice({
+  title,
+  body,
+  children,
+}: {
+  title: string;
+  body: string;
+  children?: React.ReactNode;
+}) {
+  return (
+    <View style={styles.notice}>
+      <Text style={type.h2}>{title}</Text>
+      <Text style={type.body}>{body}</Text>
+      {children}
+    </View>
+  );
+}
+
+function MatchList({ city }: { city: string }) {
+  const matches = useMatches();
+  if (!matches) return <ActivityIndicator color={colors.primary} style={styles.spinner} />;
+  if (matches.length === 0) {
+    return (
+      <Notice
+        title="No matches yet"
+        body={`We show verified people in ${city} whose dates overlap yours by at least 14 days. No one fits yet. New people join all the time, so check back soon. You can also double-check your dates.`}>
+        <Button
+          title="Edit my dates"
+          variant="secondary"
+          onPress={() => router.push({ pathname: '/stay', params: { edit: '1' } })}
+        />
+      </Notice>
+    );
+  }
+  return (
+    <>
+      <Text style={[type.small, styles.count]}>
+        {matches.length} {matches.length === 1 ? 'match' : 'matches'}
+      </Text>
+      {matches.map((m) => (
+        <MatchCard key={m.otherUid} match={m} />
+      ))}
+    </>
+  );
+}
+
+// Home: the matches list. Sends new users through stay details and the checklist first.
 export default function Home() {
   const { profile, offerLetterStatus, checklistSkipped } = useProfile();
 
-  if (!profile?.startDate) return <Redirect href="/stay" />;
+  if (!profile?.startDate || !profile.endDate || !profile.city) return <Redirect href="/stay" />;
   if (!profile.checklist && !checklistSkipped) return <Redirect href="/checklist" />;
 
   const profileButton = (
@@ -27,39 +73,31 @@ export default function Home() {
     <Screen headerRight={profileButton}>
       <Text style={type.h1}>Roommate matches</Text>
       <Text style={[type.body, styles.sub]}>
-        {profile.city} · {formatRange(profile.startDate, profile.endDate!)} · Up to $
+        {profile.city} · {formatRange(profile.startDate, profile.endDate)} · Up to $
         {profile.budgetMax?.toLocaleString('en-US')}
       </Text>
 
-      {profile.verified ? (
-        <View style={styles.card}>
-          <VerifiedPill />
-          <Text style={[type.body, styles.cardText]}>
-            Matches show up here once we build matching (next step).
-          </Text>
-        </View>
-      ) : (
-        <View style={styles.card}>
-          <Text style={type.h2}>
-            {offerLetterStatus === 'pending'
-              ? 'Offer letter pending review'
-              : 'You’re not verified yet'}
-          </Text>
-          <Text style={[type.body, styles.cardText]}>
-            {offerLetterStatus === 'pending'
-              ? 'We’ll show your matches as soon as the Overlap team approves your letter.'
-              : 'You can set up your profile now, but you’ll only see matches after you verify.'}
-          </Text>
-          {offerLetterStatus !== 'pending' && (
-            <Button title="Verify now" onPress={() => router.push('/verify')} />
-          )}
-        </View>
+      {!profile.checklist && (
+        <Pressable
+          onPress={() => router.push({ pathname: '/checklist', params: { edit: '1' } })}
+          style={styles.checklistLink}>
+          <Text style={type.link}>Finish your compatibility checklist</Text>
+        </Pressable>
       )}
 
-      {!profile.checklist && (
-        <Pressable onPress={() => router.push({ pathname: '/checklist', params: { edit: '1' } })}>
-          <Text style={[type.link, styles.checklistLink]}>Finish your compatibility checklist</Text>
-        </Pressable>
+      {profile.verified ? (
+        <MatchList city={profile.city} />
+      ) : offerLetterStatus === 'pending' ? (
+        <Notice
+          title="Offer letter pending review"
+          body="We’ll show your matches as soon as the Overlap team approves your letter."
+        />
+      ) : (
+        <Notice
+          title="You’re not verified yet"
+          body="You can set up your profile now, but you’ll only see matches after you verify.">
+          <Button title="Verify now" onPress={() => router.push('/verify')} />
+        </Notice>
       )}
     </Screen>
   );
@@ -67,7 +105,8 @@ export default function Home() {
 
 const styles = StyleSheet.create({
   sub: { marginTop: space.xs, marginBottom: space.lg },
-  card: { backgroundColor: colors.card, borderRadius: radius, padding: space.md, gap: space.sm },
-  cardText: { marginTop: 0 },
-  checklistLink: { marginTop: space.lg },
+  notice: { backgroundColor: colors.card, borderRadius: radius, padding: space.md, gap: space.sm },
+  spinner: { marginTop: space.xl },
+  count: { marginBottom: space.sm },
+  checklistLink: { marginBottom: space.md },
 });

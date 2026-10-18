@@ -22,6 +22,11 @@ service cloud.firestore {
       allow read, write: if request.auth.uid == uid;
     }
 
+    // Written by computeMatches only.
+    match /matches/{uid}/items/{otherUid} {
+      allow read: if request.auth.uid == uid;
+    }
+
     // verificationCodes: no client access (no rule = denied).
   }
 }
