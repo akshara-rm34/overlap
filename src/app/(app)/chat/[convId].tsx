@@ -16,6 +16,7 @@ import { SafeAreaView } from 'react-native-safe-area-context';
 import { Loading } from '@/components/Loading';
 import { OverlapPill } from '@/components/OverlapPill';
 import { useAuth } from '@/lib/auth';
+import { logEvent } from '@/lib/events';
 import { MESSAGE_MAX, otherUidIn, sendMessage, useConversation, type Message } from '@/lib/chat';
 import { useMatch } from '@/lib/matches';
 import { colors, fonts, radius, space, type } from '@/lib/theme';
@@ -73,6 +74,13 @@ export default function Chat() {
         me,
         text: draft,
         newConversation: conv ? undefined : { overlapType: match!.overlapType },
+      });
+      logEvent('message_sent', {
+        convId,
+        otherUid,
+        overlapType: overlapType ?? null,
+        isFirstInConversation: !conv,
+        messageCount: messages!.filter((x) => x.senderId === me).length + 1,
       });
     } catch {
       setText(draft);

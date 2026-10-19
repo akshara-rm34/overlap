@@ -1,6 +1,6 @@
 import Feather from '@expo/vector-icons/Feather';
 import { router, useLocalSearchParams } from 'expo-router';
-import { useState } from 'react';
+import { useEffect, useRef, useState } from 'react';
 import { Pressable, StyleSheet, Text, View } from 'react-native';
 
 import { Avatar } from '@/components/Avatar';
@@ -14,6 +14,7 @@ import { VerifiedPill } from '@/components/VerifiedPill';
 import { useAuth } from '@/lib/auth';
 import { convIdFor } from '@/lib/chat';
 import { formatDate, formatRange } from '@/lib/dates';
+import { logEvent } from '@/lib/events';
 import { useMatch } from '@/lib/matches';
 import { useProfile } from '@/lib/profile';
 import { colors, fonts, radius, space, type } from '@/lib/theme';
@@ -30,6 +31,19 @@ export default function PersonProfile() {
   const person = useUserProfile(uid);
   const match = useMatch(uid);
   const [showBadge, setShowBadge] = useState(false);
+  const viewLogged = useRef(false);
+
+  useEffect(() => {
+    if (viewLogged.current || !uid || !person || match === undefined) return;
+    viewLogged.current = true;
+    logEvent('profile_view', { otherUid: uid, overlapType: match?.overlapType ?? null });
+  }, [uid, person, match]);
+
+  function toggleBadge() {
+    const next = !showBadge;
+    setShowBadge(next);
+    if (next) logEvent('badge_tap', { otherUid: uid });
+  }
 
   if (person === undefined || match === undefined) return <Loading />;
 
@@ -63,7 +77,7 @@ export default function PersonProfile() {
           {person.company && <Text style={type.body}>{person.company}</Text>}
           {person.verified && (
             <Pressable
-              onPress={() => setShowBadge((s) => !s)}
+              onPress={toggleBadge}
               accessibilityRole="button"
               accessibilityLabel="What does Verified mean?"
               hitSlop={6}>

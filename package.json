@@ -23,6 +23,7 @@
     "react-native-web": "^0.21.4"
   },
   "devDependencies": {
+    "@firebase/rules-unit-testing": "^6.0.0",
     "@types/react": "~19.2.4",
     "eslint": "^9.0.0",
     "eslint-config-expo": "~57.0.2",
@@ -39,7 +40,8 @@
     "emulators": "npm --prefix functions run build && firebase emulators:start --import=./emulator-data --export-on-exit=./emulator-data",
     "lint": "expo lint",
     "functions:watch": "npm --prefix functions run build:watch",
-    "seed": "node scripts/seed-emulator.ts"
+    "seed": "node scripts/seed-emulator.ts",
+    "test:rules": "firebase emulators:exec --config firebase.test.json --only firestore,storage --project demo-overlap-rules \"node --test tests/rules/\""
   },
   "private": true
 }

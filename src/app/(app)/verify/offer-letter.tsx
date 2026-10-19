@@ -6,6 +6,7 @@ import { Pressable, StyleSheet, Text } from 'react-native';
 
 import { Button } from '@/components/Button';
 import { Screen } from '@/components/Screen';
+import { logEvent } from '@/lib/events';
 import { colors, fonts, radius, space, type } from '@/lib/theme';
 import { MAX_OFFER_LETTER_BYTES, uploadOfferLetter } from '@/lib/verification';
 
@@ -37,6 +38,7 @@ export default function OfferLetter() {
     setBusy(true);
     try {
       await uploadOfferLetter(file);
+      logEvent('verify_started', { method: 'offer_letter' });
       // The layout moves on once the status shows pending.
     } catch {
       setError('Upload failed. Please try again.');

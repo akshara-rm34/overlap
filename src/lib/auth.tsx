@@ -9,6 +9,7 @@ import {
 import { doc, serverTimestamp, setDoc } from 'firebase/firestore';
 import { createContext, useContext, useEffect, useState, type ReactNode } from 'react';
 
+import { logEvent } from './events';
 import { auth, db } from './firebase';
 
 type AuthState = {
@@ -46,6 +47,7 @@ export async function signUp(displayName: string, email: string, password: strin
     createdAt: serverTimestamp(),
     updatedAt: serverTimestamp(),
   });
+  logEvent('signup', {});
 }
 
 export function signIn(email: string, password: string) {

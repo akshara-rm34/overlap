@@ -6,6 +6,7 @@ import { Button } from '@/components/Button';
 import { Screen } from '@/components/Screen';
 import { TextField } from '@/components/TextField';
 import { signOut } from '@/lib/auth';
+import { logEvent } from '@/lib/events';
 import { useProfile } from '@/lib/profile';
 import { space, type } from '@/lib/theme';
 import { sendVerificationCode, verifyErrorMessage } from '@/lib/verification';
@@ -27,6 +28,7 @@ export default function VerifyEmail() {
     setBusy(true);
     try {
       const devCode = await sendVerificationCode(workEmail);
+      logEvent('verify_started', { method: 'work_email' });
       router.push({ pathname: '/verify/code', params: { email: workEmail, devCode } });
     } catch (err) {
       setError(verifyErrorMessage(err));

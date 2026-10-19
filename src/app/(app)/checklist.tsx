@@ -1,11 +1,12 @@
 import { router, useLocalSearchParams } from 'expo-router';
-import { useState } from 'react';
+import { useRef, useState } from 'react';
 import { Pressable, StyleSheet, Text } from 'react-native';
 
 import { Button } from '@/components/Button';
 import { OptionGroup } from '@/components/OptionGroup';
 import { Screen } from '@/components/Screen';
 import { QUESTIONS, isComplete, type Checklist } from '@/lib/checklist';
+import { logEvent } from '@/lib/events';
 import { saveChecklist, useProfile } from '@/lib/profile';
 import { space, type } from '@/lib/theme';
 
@@ -18,7 +19,13 @@ export default function ChecklistScreen() {
   const [error, setError] = useState<string | null>(null);
   const [busy, setBusy] = useState(false);
 
+  const startLogged = useRef(!!profile?.checklist);
+
   function setAnswer<K extends keyof Checklist>(key: K, value: Checklist[K]) {
+    if (!startLogged.current) {
+      startLogged.current = true;
+      logEvent('checklist_started', {});
+    }
     setAnswers((a) => ({ ...a, [key]: value }));
   }
 
@@ -27,7 +34,9 @@ export default function ChecklistScreen() {
     setError(null);
     setBusy(true);
     try {
-      await saveChecklist(answers, !!profile?.checklistCompletedAt);
+      const firstTime = !profile?.checklistCompletedAt;
+      await saveChecklist(answers, !firstTime);
+      if (firstTime) logEvent('checklist_completed', {});
       if (editing) router.back();
       else router.replace('/');
     } catch {

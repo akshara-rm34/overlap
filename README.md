@@ -68,7 +68,30 @@ Blocked domains, the domain to company map, admin uids, and matching thresholds 
 ```bash
 npm run typecheck
 npx expo lint
+npm run test:rules   # Firestore + Storage security rules tests (starts its own emulators)
 ```
+
+`test:rules` uses `firebase.test.json`, which runs on different ports, so it works while your
+dev emulators are running.
+
+## Event logging
+
+Every study event goes through `logEvent(name, props)` in `src/lib/events.ts` and lands in the
+`events` collection as `{ uid, name, props, ts }`. `verify_completed` is written by the
+server when a code is confirmed. The app can only create events (no reads, edits, or deletes).
+
+| Event | When |
+|---|---|
+| `signup` | account created |
+| `verify_started` | work email code requested (or resent), or offer letter uploaded |
+| `verify_completed` | server confirms the code |
+| `search` | matches screen opened (verified users) |
+| `match_shown` | each match, the first time it shows in an app session |
+| `profile_view` | a match's profile opened |
+| `badge_tap` | badge explanation opened |
+| `message_sent` | every message, with `isFirstInConversation` and `messageCount` |
+| `checklist_started` | first checklist answer |
+| `checklist_completed` | all 5 answered and saved the first time |
 
 ## Project layout
 
@@ -88,6 +111,6 @@ npx expo lint
 - `src/lib/profile.tsx` live profile + verification status for the signed-in user.
 - `src/lib/verification.ts` calls the verification functions and uploads offer letters.
 - `functions/` Cloud Functions (TypeScript). `config.ts` has all tunable values.
-- `firestore.rules`, `storage.rules` security rules. Full Firestore rules and tests come in build step 7.
+- `firestore.rules`, `storage.rules` security rules. Tests are in `tests/rules/`.
 
 Deploy and EAS Update steps get added in build step 9.

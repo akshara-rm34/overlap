@@ -1,11 +1,13 @@
 import Feather from '@expo/vector-icons/Feather';
-import { Redirect, router } from 'expo-router';
+import { Redirect, router, useFocusEffect } from 'expo-router';
+import { useCallback, useEffect } from 'react';
 import { ActivityIndicator, Pressable, StyleSheet, Text, View } from 'react-native';
 
 import { Button } from '@/components/Button';
 import { MatchCard } from '@/components/MatchCard';
 import { Screen } from '@/components/Screen';
 import { formatRange } from '@/lib/dates';
+import { logEvent, logMatchShown } from '@/lib/events';
 import { useMatches } from '@/lib/matches';
 import { useProfile } from '@/lib/profile';
 import { colors, radius, space, type } from '@/lib/theme';
@@ -30,6 +32,20 @@ function Notice({
 
 function MatchList({ city }: { city: string }) {
   const matches = useMatches();
+
+  useFocusEffect(useCallback(() => logEvent('search', { city }), [city]));
+
+  useEffect(() => {
+    for (const m of matches ?? []) {
+      if (!m.profile) continue; // not rendered until the profile loads
+      logMatchShown({
+        otherUid: m.otherUid,
+        overlapType: m.overlapType,
+        overlapDays: m.overlapDays,
+      });
+    }
+  }, [matches]);
+
   if (!matches) return <ActivityIndicator color={colors.primary} style={styles.spinner} />;
   if (matches.length === 0) {
     return (

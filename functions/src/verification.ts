@@ -6,6 +6,7 @@ import { HttpsError, onCall } from 'firebase-functions/https';
 
 import { BLOCK_EDU, COMPANY_NAMES, PERSONAL_EMAIL_DOMAINS, VERIFICATION } from './config';
 import { EMAIL_SECRET, isConsoleEmail, sendEmail } from './email';
+import { logServerEvent } from './events';
 
 const EMAIL_RE = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
 
@@ -180,6 +181,7 @@ export const confirmVerificationCode = onCall(async (req) => {
       { merge: true },
     );
     tx.delete(codeRef);
+    logServerEvent('verify_completed', uid, { method: 'work_email' }, tx);
     return { ok: true, company };
   });
 

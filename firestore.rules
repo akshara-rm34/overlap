@@ -1,41 +1,115 @@
 rules_version = '2';
 
-// Temporary rules (emulator only). Full rules + tests come in step 7.
+// Overlap security rules. Tests: tests/rules (npm run test:rules).
 service cloud.firestore {
   match /databases/{database}/documents {
+
+    function signedIn() {
+      return request.auth != null;
+    }
+
+    function isMe(uid) {
+      return signedIn() && request.auth.uid == uid;
+    }
+
+    function amVerified() {
+      return signedIn()
+        && get(/databases/$(database)/documents/users/$(request.auth.uid)).data.get('verified', false) == true;
+    }
+
+    function isYmd(v) {
+      return v is string && v.matches('^[0-9]{4}-[0-9]{2}-[0-9]{2}$');
+    }
+
+    // ---------- users/{uid}: public profile ----------
+
+    // Only the server (Cloud Functions / Admin SDK) writes these.
+    function serverOnlyFields() {
+      return ['verified', 'verificationMethod', 'company', 'verifiedAt', 'participantId'];
+    }
+
+    function validChecklist(c) {
+      return c == null || (
+        c is map
+        && c.keys().hasOnly(['schedule', 'cleanliness', 'guests', 'budgetFlexible', 'stayingFullTerm'])
+        && c.keys().hasAll(['schedule', 'cleanliness', 'guests', 'budgetFlexible', 'stayingFullTerm'])
+        && c.schedule in ['early', 'standard', 'late']
+        && c.cleanliness in [1, 2, 3, 4, 5]
+        && c.guests in ['rarely', 'sometimes', 'often']
+        && c.budgetFlexible is bool
+        && c.stayingFullTerm in ['yes', 'probably', 'unsure']
+      );
+    }
+
+    // Checks the fields the app is allowed to set, whenever they're present.
+    function validProfile(d) {
+      return d.keys().hasOnly([
+          'displayName', 'participantId', 'city', 'startDate', 'endDate', 'budgetMin', 'budgetMax',
+          'bio', 'verified', 'verificationMethod', 'company', 'verifiedAt', 'checklist',
+          'checklistCompletedAt', 'createdAt', 'updatedAt'])
+        && d.displayName is string && d.displayName.size() > 0 && d.displayName.size() <= 50
+        && (!('city' in d) || (d.city is string && d.city.size() <= 60))
+        && (!('startDate' in d) || isYmd(d.startDate))
+        && (!('endDate' in d) || (isYmd(d.endDate) && d.endDate > d.startDate))
+        && (!('budgetMin' in d) || (d.budgetMin is number && d.budgetMin >= 0 && d.budgetMin <= 100000))
+        && (!('budgetMax' in d) || (d.budgetMax is number && d.budgetMax >= d.budgetMin && d.budgetMax <= 100000))
+        && (!('bio' in d) || (d.bio is string && d.bio.size() <= 280))
+        && validChecklist(d.get('checklist', null));
+    }
+
     match /users/{uid} {
-      allow read: if request.auth != null;
-      // On create, the server-only fields must start empty.
-      allow create: if request.auth.uid == uid
+      // Your own profile, or anyone's if you're verified.
+      allow get: if isMe(uid) || amVerified();
+
+      allow create: if isMe(uid)
+        && validProfile(request.resource.data)
         && request.resource.data.verified == false
         && request.resource.data.verificationMethod == null
         && request.resource.data.company == null
         && request.resource.data.verifiedAt == null
         && request.resource.data.participantId == null;
-      // The owner can edit their profile, but not the server-only fields.
-      allow update: if request.auth.uid == uid
-        && !request.resource.data.diff(resource.data).affectedKeys()
-            .hasAny(['verified', 'verificationMethod', 'company', 'verifiedAt', 'participantId']);
+
+      allow update: if isMe(uid)
+        && validProfile(request.resource.data)
+        && !request.resource.data.diff(resource.data).affectedKeys().hasAny(serverOnlyFields());
     }
+
+    // ---------- private/{uid}: owner-only ----------
 
     match /private/{uid} {
-      allow read, write: if request.auth.uid == uid;
+      allow get: if isMe(uid);
+
+      // The app only writes here to mark an offer letter as uploaded.
+      // workEmail and the review result are written by the server.
+      allow create, update: if isMe(uid)
+        && request.resource.data.diff(resource == null ? {} : resource.data).affectedKeys()
+            .hasOnly(['offerLetterPath', 'offerLetterStatus', 'updatedAt'])
+        && request.resource.data.offerLetterStatus == 'pending'
+        && request.resource.data.offerLetterPath is string
+        && request.resource.data.offerLetterPath.matches('^offerLetters/' + uid + '/[^/]+$');
     }
 
-    // Written by computeMatches only.
+    // ---------- matches: written by computeMatches only ----------
+
     match /matches/{uid}/items/{otherUid} {
-      allow read: if request.auth.uid == uid;
+      allow read: if isMe(uid);
     }
+
+    // ---------- conversations + messages ----------
 
     // convId is the two uids sorted and joined with "_", so it says who's in the conversation
     // even before the document exists.
     function inConv(convId) {
-      return request.auth != null && request.auth.uid in convId.split('_');
+      return signedIn() && request.auth.uid in convId.split('_');
+    }
+
+    function otherIn(convId) {
+      return convId.split('_')[0] == request.auth.uid ? convId.split('_')[1] : convId.split('_')[0];
     }
 
     match /conversations/{convId} {
       allow get: if inConv(convId);
-      allow list: if request.auth.uid in resource.data.participants;
+      allow list: if signedIn() && request.auth.uid in resource.data.participants;
 
       // Only people who are matched can start a conversation.
       allow create: if inConv(convId)
@@ -48,9 +122,12 @@ service cloud.firestore {
         && request.resource.data.overlapType == get(/databases/$(database)/documents/matches/$(request.auth.uid)/items/$(otherIn(convId))).data.overlapType;
 
       // Participants only bump the "last message" fields.
-      allow update: if request.auth.uid in resource.data.participants
+      allow update: if signedIn() && request.auth.uid in resource.data.participants
         && request.resource.data.diff(resource.data).affectedKeys()
-            .hasOnly(['lastMessageAt', 'lastMessageText', 'lastSenderId', 'updatedAt']);
+            .hasOnly(['lastMessageAt', 'lastMessageText', 'lastSenderId', 'updatedAt'])
+        && request.resource.data.lastSenderId == request.auth.uid
+        && request.resource.data.lastMessageText is string
+        && request.resource.data.lastMessageText.size() <= 140;
 
       // Messages can't be edited or deleted.
       match /messages/{msgId} {
@@ -66,10 +143,20 @@ service cloud.firestore {
       }
     }
 
-    function otherIn(convId) {
-      return convId.split('_')[0] == request.auth.uid ? convId.split('_')[1] : convId.split('_')[0];
+    // ---------- events: create-only study log ----------
+
+    match /events/{eventId} {
+      // verify_completed is logged by the server, so the app can't fake it.
+      allow create: if signedIn()
+        && request.resource.data.keys().hasOnly(['uid', 'name', 'props', 'ts'])
+        && request.resource.data.uid == request.auth.uid
+        && request.resource.data.name in [
+            'signup', 'verify_started', 'search', 'match_shown', 'profile_view', 'badge_tap',
+            'message_sent', 'checklist_started', 'checklist_completed']
+        && request.resource.data.props is map
+        && request.resource.data.ts == request.time;
     }
 
-    // verificationCodes: no client access (no rule = denied).
+    // verificationCodes and anything else: no client access.
   }
 }

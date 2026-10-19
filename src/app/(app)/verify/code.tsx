@@ -5,6 +5,7 @@ import { Pressable, StyleSheet, Text, View } from 'react-native';
 import { Button } from '@/components/Button';
 import { Screen } from '@/components/Screen';
 import { TextField } from '@/components/TextField';
+import { logEvent } from '@/lib/events';
 import { colors, fonts, radius, space, type } from '@/lib/theme';
 import {
   confirmVerificationCode,
@@ -48,6 +49,7 @@ export default function EnterCode() {
     setNotice(null);
     try {
       setDevCode(await sendVerificationCode(email));
+      logEvent('verify_started', { method: 'work_email' });
       setCode('');
       setNotice('New code sent.');
       setWait(RESEND_WAIT_SECONDS);
