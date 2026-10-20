@@ -25,6 +25,7 @@ function AppStack() {
         <Stack.Screen name="person/[uid]" />
         <Stack.Screen name="conversations" />
         <Stack.Screen name="chat/[convId]" />
+        <Stack.Screen name="admin" />
       </Stack.Protected>
     </Stack>
   );

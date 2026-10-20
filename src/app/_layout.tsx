@@ -22,6 +22,8 @@ function RootStack() {
       <Stack.Protected guard={!!user}>
         <Stack.Screen name="(app)" />
       </Stack.Protected>
+      {/* Open to everyone, signed in or not. */}
+      <Stack.Screen name="what-we-log" />
     </Stack>
   );
 }

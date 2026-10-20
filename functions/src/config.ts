@@ -30,7 +30,8 @@ export const COMPANY_NAMES: Record<string, string> = {
   'ramp.com': 'Ramp',
 };
 
-// uids allowed to approve offer letters.
+// uids allowed to review offer letters (Firebase console > Authentication shows each uid).
+// These accounts are also left out of the funnel numbers.
 export const ADMIN_UIDS: string[] = [];
 
 export const VERIFICATION = {

@@ -1,4 +1,5 @@
 import { router } from 'expo-router';
+import { useEffect, useState } from 'react';
 import { Pressable, StyleSheet, Text, View } from 'react-native';
 
 import { Button } from '@/components/Button';
@@ -9,6 +10,7 @@ import { QUESTIONS, answerSummary } from '@/lib/checklist';
 import { formatDate } from '@/lib/dates';
 import { useProfile } from '@/lib/profile';
 import { colors, fonts, radius, space, type } from '@/lib/theme';
+import { listOfferLetters } from '@/lib/verification';
 
 function money(n: number) {
   return `$${n.toLocaleString('en-US')}`;
@@ -47,6 +49,14 @@ function Row({ label, value }: { label: string; value: string }) {
 
 export default function MyProfile() {
   const { profile, offerLetterStatus } = useProfile();
+  // Only team admins get a list back; for everyone else this fails and the link stays hidden.
+  const [pendingLetters, setPendingLetters] = useState<number | null>(null);
+  useEffect(() => {
+    listOfferLetters()
+      .then((l) => setPendingLetters(l.length))
+      .catch(() => {});
+  }, []);
+
   if (!profile) return null;
   const hasStay = profile.city && profile.startDate && profile.endDate;
 
@@ -107,6 +117,15 @@ export default function MyProfile() {
         )}
       </Section>
 
+      {pendingLetters !== null && (
+        <Pressable onPress={() => router.push('/admin')} style={styles.footLink}>
+          <Text style={type.link}>Review offer letters ({pendingLetters})</Text>
+        </Pressable>
+      )}
+      <Pressable onPress={() => router.push('/what-we-log')} style={styles.footLink}>
+        <Text style={type.link}>What we log</Text>
+      </Pressable>
+
       <Button title="Sign out" variant="secondary" onPress={() => signOut()} />
     </Screen>
   );
@@ -145,4 +164,5 @@ const styles = StyleSheet.create({
     textAlign: 'right',
   },
   bio: { marginTop: space.sm },
+  footLink: { marginBottom: space.md },
 });

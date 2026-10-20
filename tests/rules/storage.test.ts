@@ -15,7 +15,7 @@ const storage = (uid: string) =>
 const bytes = (n: number) => new Uint8Array(n);
 
 before(async () => {
-  env = await testEnv();
+  env = await testEnv('storage');
 });
 after(async () => {
   await env.cleanup();

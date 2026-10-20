@@ -33,7 +33,7 @@ const db = (uid: string | null) =>
 const convId = ['alice', 'bob'].sort().join('_');
 
 before(async () => {
-  env = await testEnv();
+  env = await testEnv('firestore');
 });
 after(async () => {
   await env.cleanup();

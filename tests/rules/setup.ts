@@ -2,12 +2,11 @@ import { readFileSync } from 'node:fs';
 
 import { initializeTestEnvironment, type RulesTestEnvironment } from '@firebase/rules-unit-testing';
 
-export async function testEnv(): Promise<RulesTestEnvironment> {
-  return initializeTestEnvironment({
-    projectId: 'demo-overlap-rules',
-    firestore: { rules: readFileSync('firestore.rules', 'utf8') },
-    storage: { rules: readFileSync('storage.rules', 'utf8') },
-  });
+// Each test file loads only its own rules. The files run in parallel, and reloading the other
+// file's rules mid-test made the first storage upload fail now and then.
+export async function testEnv(service: 'firestore' | 'storage'): Promise<RulesTestEnvironment> {
+  const rules = readFileSync(`${service}.rules`, 'utf8');
+  return initializeTestEnvironment({ projectId: 'demo-overlap-rules', [service]: { rules } });
 }
 
 // A profile as the app creates it at sign-up.

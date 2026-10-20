@@ -45,3 +45,6 @@ yarn-error.*
 emulator-data/
 *-debug.log
 
+
+# Event exports (participant data)
+exports/

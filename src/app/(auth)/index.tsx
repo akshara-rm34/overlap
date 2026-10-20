@@ -12,10 +12,12 @@ export default function Welcome() {
         <>
           <Button title="Create account" onPress={() => router.push('/sign-up')} />
           <Button title="Sign in" variant="secondary" onPress={() => router.push('/sign-in')} />
-          {/* TODO step 8: link to the "What we log" page. */}
           <Text style={[type.small, styles.note]}>
             This is a class study. We log app actions (like sign-ups, matches, and messages sent)
-            with an anonymous ID, never your work email.
+            with an anonymous ID, never your work email.{' '}
+            <Text style={type.link} onPress={() => router.push('/what-we-log')}>
+              What we log
+            </Text>
           </Text>
         </>
       }>

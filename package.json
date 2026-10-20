@@ -41,7 +41,10 @@
     "lint": "expo lint",
     "functions:watch": "npm --prefix functions run build:watch",
     "seed": "node scripts/seed-emulator.ts",
-    "test:rules": "firebase emulators:exec --config firebase.test.json --only firestore,storage --project demo-overlap-rules \"node --test tests/rules/\""
+    "test:rules": "firebase emulators:exec --config firebase.test.json --only firestore,storage --project demo-overlap-rules \"node --test tests/rules/\"",
+    "export-events": "node --disable-warning=MODULE_TYPELESS_PACKAGE_JSON scripts/export-events.ts",
+    "funnel": "node --disable-warning=MODULE_TYPELESS_PACKAGE_JSON scripts/funnel.ts",
+    "delete-test-data": "node --disable-warning=MODULE_TYPELESS_PACKAGE_JSON scripts/delete-test-data.ts"
   },
   "private": true
 }

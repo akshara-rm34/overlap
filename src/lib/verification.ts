@@ -54,3 +54,33 @@ export function verifyErrorMessage(err: unknown): string {
   if (code?.startsWith('functions/') && text && text !== 'internal') return text;
   return 'Something went wrong. Please try again.';
 }
+
+// Team-only offer-letter review. The server checks the admin list, so these fail for everyone else.
+export type PendingLetter = {
+  uid: string;
+  displayName: string;
+  path: string;
+  uploadedAt: string | null;
+};
+
+const listLettersFn = httpsCallable<void, { letters: PendingLetter[] }>(
+  functions,
+  'listOfferLetters',
+);
+const approveLetterFn = httpsCallable<{ uid: string; company: string }, { ok: true }>(
+  functions,
+  'approveOfferLetter',
+);
+const rejectLetterFn = httpsCallable<{ uid: string }, { ok: true }>(functions, 'rejectOfferLetter');
+
+export async function listOfferLetters() {
+  return (await listLettersFn()).data.letters;
+}
+
+export async function approveOfferLetter(uid: string, company: string) {
+  await approveLetterFn({ uid, company });
+}
+
+export async function rejectOfferLetter(uid: string) {
+  await rejectLetterFn({ uid });
+}

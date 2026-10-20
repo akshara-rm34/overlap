@@ -63,6 +63,35 @@ The functions send codes through `sendEmail()` in `functions/src/email.ts`. Pick
 Blocked domains, the domain to company map, admin uids, and matching thresholds are all in
 `functions/src/config.ts`.
 
+## Offer letter review
+
+Uploaded letters wait for someone on the team to check them by hand.
+
+1. Add your uid to `ADMIN_UIDS` in `functions/src/config.ts` (find it under Authentication in
+   the Firebase console, or at http://localhost:4000/auth for the emulators).
+2. In the app, go to your profile. A "Review offer letters" link shows up for admins only.
+3. Open the file in the console under Storage (`offerLetters/<uid>/`), check it, then approve
+   (type the company name) or reject.
+
+Approving marks the user verified with `verificationMethod: "offer_letter"` and logs
+`verify_completed`. Rejecting sends them back to the verify screens. Either way the file is deleted.
+Admin accounts are also left out of the funnel numbers.
+
+## Analysis scripts
+
+They run against the emulators by default. Add `-- --project <id>` for the real project (run
+`gcloud auth application-default login` first).
+
+```bash
+npm run funnel             # Sprint 3 metrics vs. targets
+npm run export-events      # writes exports/events-<date>.csv (git-ignored)
+npm run delete-test-data -- --yes   # after the sprint: deletes every account and all data
+```
+
+The export replaces uids with participant ids (P01, P02, ... in sign-up order), including the
+uids inside `otherUid` and `convId`. Each user's id is saved on their profile, so it stays the
+same across exports. Add `--include-team` to either script to count admin accounts.
+
 ## Checks
 
 ```bash
@@ -93,6 +122,9 @@ server when a code is confirmed. The app can only create events (no reads, edits
 | `checklist_started` | first checklist answer |
 | `checklist_completed` | all 5 answered and saved the first time |
 
+The app's "What we log" page (`src/app/what-we-log.tsx`, linked from the welcome screen and the
+profile) explains this list in plain words. Update it if you add an event.
+
 ## Project layout
 
 - `src/app/` routes (Expo Router). `(auth)` = welcome, sign in, sign up. `(app)` = signed-in screens:
@@ -105,7 +137,8 @@ server when a code is confirmed. The app can only create events (no reads, edits
   joined with `_`. It's created with the first message, and only between matched users.
 - `functions/src/matching.ts` `computeMatches`: rebuilds matches when a user's city, dates, or
   verified flag change. The overlap math is in `functions/src/overlap.ts`.
-- `scripts/` seed script (and later the analysis scripts).
+- `scripts/` seed script and analysis scripts. `scripts/lib/admin.ts` picks emulators vs. real project.
+- `functions/src/offerLetters.ts` team-only offer letter review. The screen is `src/app/(app)/admin.tsx`.
 - `src/lib/firebase.ts` Firebase setup and emulator connection.
 - `src/lib/auth.tsx` auth state and sign up / sign in / sign out.
 - `src/lib/profile.tsx` live profile + verification status for the signed-in user.

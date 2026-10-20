@@ -15,7 +15,7 @@ export default function VerifyEmail() {
   const [email, setEmail] = useState('');
   const [error, setError] = useState<string | null>(null);
   const [busy, setBusy] = useState(false);
-  const { skipVerify } = useProfile();
+  const { skipVerify, offerLetterStatus } = useProfile();
 
   function onSkip() {
     skipVerify();
@@ -65,6 +65,11 @@ export default function VerifyEmail() {
         Confirm that you’re relocating for a real internship or job before connecting with
         roommates. Your profile shows your company name, never your email.
       </Text>
+      {offerLetterStatus === 'rejected' && (
+        <Text style={[type.error, styles.error]}>
+          We couldn’t approve your offer letter. Try your work email, or upload a clearer copy.
+        </Text>
+      )}
       <TextField
         label="Work email"
         value={email}
