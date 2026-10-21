@@ -30,85 +30,88 @@ function requireUid(auth: { uid: string } | undefined): string {
   return auth.uid;
 }
 
-export const sendVerificationCode = onCall({ secrets: [EMAIL_SECRET] }, async (req) => {
-  const uid = requireUid(req.auth);
-  const raw = (req.data as { workEmail?: unknown })?.workEmail;
-  const workEmail = typeof raw === 'string' ? raw.trim().toLowerCase() : '';
+export const sendVerificationCode = onCall(
+  { secrets: [EMAIL_SECRET], invoker: 'public' },
+  async (req) => {
+    const uid = requireUid(req.auth);
+    const raw = (req.data as { workEmail?: unknown })?.workEmail;
+    const workEmail = typeof raw === 'string' ? raw.trim().toLowerCase() : '';
 
-  if (!EMAIL_RE.test(workEmail)) {
-    throw new HttpsError('invalid-argument', 'That email address doesn’t look right.');
-  }
-  const domain = domainOf(workEmail);
-  if (PERSONAL_EMAIL_DOMAINS.includes(domain)) {
-    throw new HttpsError('invalid-argument', 'Please use your work email, not a personal one.');
-  }
-  if (BLOCK_EDU && domain.endsWith('.edu')) {
-    throw new HttpsError(
-      'invalid-argument',
-      'School emails can’t be used. Use your work email, or upload your offer letter instead.',
-    );
-  }
-
-  const db = getFirestore();
-  const userRef = db.doc(`users/${uid}`);
-  const codeRef = db.doc(`verificationCodes/${uid}`);
-  const privateRef = db.doc(`private/${uid}`);
-  const code = String(randomInt(0, 1_000_000)).padStart(6, '0');
-  const now = Timestamp.now();
-  const hourAgo = now.toMillis() - 60 * 60 * 1000;
-
-  await db.runTransaction(async (tx) => {
-    const [user, existing, priv] = await Promise.all([
-      tx.get(userRef),
-      tx.get(codeRef),
-      tx.get(privateRef),
-    ]);
-    if (user.get('verified') === true) {
-      throw new HttpsError('failed-precondition', 'You’re already verified.');
+    if (!EMAIL_RE.test(workEmail)) {
+      throw new HttpsError('invalid-argument', 'That email address doesn’t look right.');
     }
-    const recentSends = ((existing.get('sentAt') as Timestamp[] | undefined) ?? []).filter(
-      (t) => t.toMillis() > hourAgo,
-    );
-    if (recentSends.length >= VERIFICATION.maxSendsPerHour) {
-      throw new HttpsError('resource-exhausted', 'Too many codes sent. Try again in an hour.');
+    const domain = domainOf(workEmail);
+    if (PERSONAL_EMAIL_DOMAINS.includes(domain)) {
+      throw new HttpsError('invalid-argument', 'Please use your work email, not a personal one.');
     }
-    tx.set(codeRef, {
-      codeHash: hashCode(uid, code),
-      workEmail,
-      expiresAt: Timestamp.fromMillis(now.toMillis() + VERIFICATION.codeTtlMinutes * 60 * 1000),
-      attempts: 0,
-      sentAt: [...recentSends, now], // send times in the last hour, for the rate limit
-    });
-    if (priv.exists) {
-      tx.update(privateRef, { workEmail, updatedAt: FieldValue.serverTimestamp() });
-    } else {
-      tx.set(privateRef, {
+    if (BLOCK_EDU && domain.endsWith('.edu')) {
+      throw new HttpsError(
+        'invalid-argument',
+        'School emails can’t be used. Use your work email, or upload your offer letter instead.',
+      );
+    }
+
+    const db = getFirestore();
+    const userRef = db.doc(`users/${uid}`);
+    const codeRef = db.doc(`verificationCodes/${uid}`);
+    const privateRef = db.doc(`private/${uid}`);
+    const code = String(randomInt(0, 1_000_000)).padStart(6, '0');
+    const now = Timestamp.now();
+    const hourAgo = now.toMillis() - 60 * 60 * 1000;
+
+    await db.runTransaction(async (tx) => {
+      const [user, existing, priv] = await Promise.all([
+        tx.get(userRef),
+        tx.get(codeRef),
+        tx.get(privateRef),
+      ]);
+      if (user.get('verified') === true) {
+        throw new HttpsError('failed-precondition', 'You’re already verified.');
+      }
+      const recentSends = ((existing.get('sentAt') as Timestamp[] | undefined) ?? []).filter(
+        (t) => t.toMillis() > hourAgo,
+      );
+      if (recentSends.length >= VERIFICATION.maxSendsPerHour) {
+        throw new HttpsError('resource-exhausted', 'Too many codes sent. Try again in an hour.');
+      }
+      tx.set(codeRef, {
+        codeHash: hashCode(uid, code),
         workEmail,
-        offerLetterPath: null,
-        offerLetterStatus: 'none',
-        createdAt: FieldValue.serverTimestamp(),
-        updatedAt: FieldValue.serverTimestamp(),
+        expiresAt: Timestamp.fromMillis(now.toMillis() + VERIFICATION.codeTtlMinutes * 60 * 1000),
+        attempts: 0,
+        sentAt: [...recentSends, now], // send times in the last hour, for the rate limit
       });
-    }
-  });
-
-  try {
-    await sendEmail({
-      to: workEmail,
-      subject: `${code} is your Overlap code`,
-      text:
-        `Your Overlap verification code is ${code}.\n\n` +
-        `It expires in ${VERIFICATION.codeTtlMinutes} minutes. ` +
-        `If you didn't ask for this, you can ignore this email.`,
+      if (priv.exists) {
+        tx.update(privateRef, { workEmail, updatedAt: FieldValue.serverTimestamp() });
+      } else {
+        tx.set(privateRef, {
+          workEmail,
+          offerLetterPath: null,
+          offerLetterStatus: 'none',
+          createdAt: FieldValue.serverTimestamp(),
+          updatedAt: FieldValue.serverTimestamp(),
+        });
+      }
     });
-  } catch (err) {
-    logger.error('sendVerificationCode: email failed', { uid, err: String(err) });
-    throw new HttpsError('internal', 'We couldn’t send the email. Please try again.');
-  }
 
-  // Emulator only: hand the code back so it can be shown on screen while testing.
-  return isConsoleEmail() ? { ok: true, devCode: code } : { ok: true };
-});
+    try {
+      await sendEmail({
+        to: workEmail,
+        subject: `${code} is your Overlap code`,
+        text:
+          `Your Overlap verification code is ${code}.\n\n` +
+          `It expires in ${VERIFICATION.codeTtlMinutes} minutes. ` +
+          `If you didn't ask for this, you can ignore this email.`,
+      });
+    } catch (err) {
+      logger.error('sendVerificationCode: email failed', { uid, err: String(err) });
+      throw new HttpsError('internal', 'We couldn’t send the email. Please try again.');
+    }
+
+    // Emulator only: hand the code back so it can be shown on screen while testing.
+    return isConsoleEmail() ? { ok: true, devCode: code } : { ok: true };
+  },
+);
 
 type ConfirmResult =
   | { ok: true; company: string }
@@ -118,7 +121,7 @@ type ConfirmResult =
       message: string;
     };
 
-export const confirmVerificationCode = onCall(async (req) => {
+export const confirmVerificationCode = onCall({ invoker: 'public' }, async (req) => {
   const uid = requireUid(req.auth);
   const raw = (req.data as { code?: unknown })?.code;
   const code = typeof raw === 'string' ? raw.trim() : '';
@@ -139,7 +142,11 @@ export const confirmVerificationCode = onCall(async (req) => {
     const attempts = snap.get('attempts') as number;
     const expiresAt = snap.get('expiresAt') as Timestamp;
     if (expiresAt.toMillis() < Date.now()) {
-      return { ok: false, code: 'deadline-exceeded', message: 'That code expired. Request a new one.' };
+      return {
+        ok: false,
+        code: 'deadline-exceeded',
+        message: 'That code expired. Request a new one.',
+      };
     }
     if (attempts >= VERIFICATION.maxAttempts) {
       return {

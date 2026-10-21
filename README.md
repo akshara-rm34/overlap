@@ -146,4 +146,58 @@ profile) explains this list in plain words. Update it if you add an event.
 - `functions/` Cloud Functions (TypeScript). `config.ts` has all tunable values.
 - `firestore.rules`, `storage.rules` security rules. Tests are in `tests/rules/`.
 
-Deploy and EAS Update steps get added in build step 9.
+## Deploy (real project)
+
+One-time setup:
+
+1. Firebase console: create the project, upgrade it to Blaze (needed for Cloud Functions and
+   Storage; a test this size stays inside the free quota), and set a $1 budget alert.
+2. Turn on Authentication > Email/Password, create Firestore (location `nam5`), and create Storage.
+3. Add a Web app, copy its config into `.env.production` (from `.env.production.example`), and
+   add each value to EAS with `npx eas-cli env:create --environment production`.
+4. `npx firebase login`. The `prod` alias in `.firebaserc` points at the project.
+5. Email: copy `functions/.env.prod.example` to `functions/.env.prod` and fill in the Gmail
+   address. Make a Gmail app password and store it with
+   `npx firebase functions:secrets:set EMAIL_SECRET --project prod`.
+
+Then deploy rules, indexes, and functions:
+
+```bash
+npm run deploy
+```
+
+After the team signs up in the real app, put your uids in `ADMIN_UIDS` and deploy again.
+
+## Publish for testers (EAS Update)
+
+The Expo project belongs to an Expo organization. Since May 2026, Expo Go only opens published
+updates for members of the organization that owns the project, so every tester needs a free
+Expo account and an invite (Viewer role) to the organization. Testers then sign in to Expo Go with that account.
+
+```bash
+npx eas-cli login
+npx eas-cli init             # first time only: links the project to the organization
+npm run publish -- --message "what changed"
+```
+
+`publish` uses the `production` environment variables stored on EAS (the same values as
+`.env.production`; EAS ignores `.env` files when an environment is set) and clears the Metro cache,
+so the emulator settings can't end up in a tester build. If the Firebase config ever changes, update
+them with `npx eas-cli env:update`. Testers open the app by scanning the update's QR code on the
+project's expo.dev page.
+
+Android fallback (no Expo account needed): `npx eas-cli build --profile preview --platform android`
+makes an installable APK.
+
+## Dry run (before inviting testers)
+
+On a phone that has never run the app, using the published update:
+
+1. Sign up, then verify with a real work email (the code should arrive within a minute).
+2. Enter a stay, finish the checklist, and see a labeled match (use a second team account in the
+   same city).
+3. Open the profile, tap the badge, read the checklist, and send a message.
+4. Upload an offer letter on another account and approve it from the admin screen.
+5. `npm run funnel -- --project <id>` shows every step, and `npm run export-events -- --project <id>` writes the CSV.
+6. Delete the team's test data before real testers start: leave the team accounts, or run
+   `npm run delete-test-data -- --project <id> --yes` and sign up again.

@@ -14,6 +14,7 @@
     "expo-linking": "~57.0.13",
     "expo-router": "~57.0.28",
     "expo-status-bar": "~57.0.1",
+    "expo-updates": "~57.0.26",
     "firebase": "^13.0.0",
     "react": "19.2.3",
     "react-dom": "19.2.3",
@@ -44,7 +45,9 @@
     "test:rules": "firebase emulators:exec --config firebase.test.json --only firestore,storage --project demo-overlap-rules \"node --test tests/rules/\"",
     "export-events": "node --disable-warning=MODULE_TYPELESS_PACKAGE_JSON scripts/export-events.ts",
     "funnel": "node --disable-warning=MODULE_TYPELESS_PACKAGE_JSON scripts/funnel.ts",
-    "delete-test-data": "node --disable-warning=MODULE_TYPELESS_PACKAGE_JSON scripts/delete-test-data.ts"
+    "delete-test-data": "node --disable-warning=MODULE_TYPELESS_PACKAGE_JSON scripts/delete-test-data.ts",
+    "deploy": "firebase deploy --project prod --only firestore,storage,functions",
+    "publish": "npx eas-cli update --channel production --environment production --clear-cache"
   },
   "private": true
 }

@@ -30,6 +30,19 @@
     "scheme": "overlap",
     "experiments": {
       "typedRoutes": true
+    },
+    "runtimeVersion": {
+      "policy": "sdkVersion"
+    },
+    "owner": "akshararm03s-team",
+    "extra": {
+      "router": {},
+      "eas": {
+        "projectId": "69e446da-5847-4ef9-9c8f-d93a4f4e333a"
+      }
+    },
+    "updates": {
+      "url": "https://u.expo.dev/69e446da-5847-4ef9-9c8f-d93a4f4e333a"
     }
   }
 }

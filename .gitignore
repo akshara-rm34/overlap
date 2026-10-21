@@ -48,3 +48,4 @@ emulator-data/
 
 # Event exports (participant data)
 exports/
+firebase-export-*/

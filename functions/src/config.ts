@@ -32,7 +32,9 @@ export const COMPANY_NAMES: Record<string, string> = {
 
 // uids allowed to review offer letters (Firebase console > Authentication shows each uid).
 // These accounts are also left out of the funnel numbers.
-export const ADMIN_UIDS: string[] = [];
+export const ADMIN_UIDS: string[] = [
+  'ujP3f7wfDfQ7bZ8DAd5QUnXNGRy1', // Akshara
+];
 
 export const VERIFICATION = {
   codeTtlMinutes: 10,

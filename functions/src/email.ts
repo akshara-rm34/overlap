@@ -45,7 +45,8 @@ async function sendWithResend({ to, subject, text }: Email) {
 async function sendWithGmail({ to, subject, text }: Email) {
   const transport = nodemailer.createTransport({
     service: 'gmail',
-    auth: { user: GMAIL_USER.value(), pass: EMAIL_SECRET.value() },
+    // Google shows app passwords with spaces; they're not part of the password.
+    auth: { user: GMAIL_USER.value(), pass: EMAIL_SECRET.value().replace(/\s/g, '') },
   });
   await transport.sendMail({ from: EMAIL_FROM.value(), to, subject, text });
 }

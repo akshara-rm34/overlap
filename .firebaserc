@@ -1,5 +1,6 @@
 {
   "projects": {
-    "default": "demo-overlap"
+    "default": "demo-overlap",
+    "prod": "overlap-cs4261"
   }
 }

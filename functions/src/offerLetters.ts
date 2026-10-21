@@ -40,7 +40,7 @@ export type PendingLetter = {
   uploadedAt: string | null; // ISO
 };
 
-export const listOfferLetters = onCall(async (req) => {
+export const listOfferLetters = onCall({ invoker: 'public' }, async (req) => {
   requireAdmin(req.auth);
   const db = getFirestore();
   const snap = await db.collection('private').where('offerLetterStatus', '==', 'pending').get();
@@ -60,7 +60,7 @@ export const listOfferLetters = onCall(async (req) => {
   return { letters };
 });
 
-export const approveOfferLetter = onCall(async (req) => {
+export const approveOfferLetter = onCall({ invoker: 'public' }, async (req) => {
   requireAdmin(req.auth);
   const uid = requireTargetUid(req.data);
   const raw = (req.data as { company?: unknown }).company;
@@ -96,7 +96,7 @@ export const approveOfferLetter = onCall(async (req) => {
   return { ok: true };
 });
 
-export const rejectOfferLetter = onCall(async (req) => {
+export const rejectOfferLetter = onCall({ invoker: 'public' }, async (req) => {
   requireAdmin(req.auth);
   const uid = requireTargetUid(req.data);
   const privateRef = getFirestore().doc(`private/${uid}`);
