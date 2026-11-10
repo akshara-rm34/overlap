@@ -93,7 +93,7 @@ export default function PersonProfile() {
               <Text style={type.body}>
                 {pending
                   ? 'You can message matches as soon as the Overlap team approves your offer letter.'
-                  : 'Everyone you message is verified, so we ask the same of you. It takes about a minute with a work email.'}
+                  : 'Verifying shows matches you’re really relocating for a job. It takes about a minute with a work email.'}
               </Text>
               {!pending && <Button title="Verify now" onPress={() => router.push('/verify')} />}
             </View>
