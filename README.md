@@ -1,6 +1,6 @@
 # Overlap
 
-Sprint 3 learning prototype for CS 4261 (team Roommate Finder). React Native + Expo Router + Firebase.
+Sprint 4 learning prototype for CS 4261 (team Roommate Finder). React Native + Expo Router + Firebase.
 
 ## Setup
 
@@ -37,7 +37,7 @@ Emulator data is saved to `emulator-data/` when you stop the emulators and loade
 With the emulators running:
 
 ```bash
-npm run seed              # adds 11 fake users in Seattle, WA and Atlanta, GA
+npm run seed              # adds 12 fake users in Seattle, WA and Atlanta, GA
 npm run seed -- --remove  # deletes them
 ```
 
@@ -83,7 +83,7 @@ They run against the emulators by default. Add `-- --project <id>` for the real 
 `gcloud auth application-default login` first).
 
 ```bash
-npm run funnel             # Sprint 3 metrics vs. targets
+npm run funnel             # Sprint 4 metrics vs. targets, split by A/B group
 npm run export-events      # writes exports/events-<date>.csv (git-ignored)
 npm run delete-test-data -- --yes   # after the sprint: deletes every account and all data
 ```
@@ -112,18 +112,39 @@ server when a code is confirmed. The app can only create events (no reads, edits
 | Event | When |
 |---|---|
 | `signup` | account created |
+| `variant_assigned` | server puts the new account in an A/B group (`required` or `optional`) |
 | `verify_started` | work email code requested (or resent), or offer letter uploaded |
-| `verify_completed` | server confirms the code |
-| `search` | matches screen opened (verified users) |
-| `match_shown` | each match, the first time it shows in an app session |
-| `profile_view` | a match's profile opened |
-| `badge_tap` | badge explanation opened |
-| `message_sent` | every message, with `isFirstInConversation` and `messageCount` |
+| `verify_skipped` | required group taps "Browse matches first" |
+| `verify_completed` | server confirms the code or approves a letter |
+| `code_fallback_shown` / `code_fallback_tap` | "No code yet?" card shown after 45s / tapped |
+| `search` | matches list loaded, with `matchCount` (0 = zero-match search) and `access` |
+| `feed_left` | matches list closed, with `durationMs` |
+| `match_shown` | each match, the first time it shows in an app session, with `budgetFit` |
+| `profile_view` | a match's profile opened, with `access` (`full` or `limited`) |
+| `badge_tap` | badge definition opened, with the badge `method` |
+| `locked_message_tap` | a user with limited access taps Message |
+| `suggestion_shown` | suggested first message shown in an empty chat |
+| `message_sent` | every message, with `isFirstInConversation`, `isReply`, `messageCount`, and `suggestion` (`unedited`, `edited`, `none`) |
 | `checklist_started` | first checklist answer |
 | `checklist_completed` | all 5 answered and saved the first time |
+| `letter_reviewed` | server, on approve/reject: `reviewMinutes` (upload to decision), `handsOnSeconds`, `mismatches` |
 
 The app's "What we log" page (`src/app/what-we-log.tsx`, linked from the welcome screen and the
 profile) explains this list in plain words. Update it if you add an event.
+
+## Sprint 4 A/B test
+
+`assignVariant` (`functions/src/experiment.ts`) puts each new profile in a group, alternating
+in sign-up order (counter in `meta/experiment`):
+
+- `required`: verify screens come first. "Browse matches first" gives limited access: match
+  cards only, no full profiles, no messaging. These users don't show up in other people's lists
+  until they verify.
+- `optional`: full access right away, shown to others with a "Not verified" badge.
+
+Limited users only read their own `matches/{uid}/items` docs, which carry a `card` (first name,
+company, badge, dates, budget, housing status) written by `computeMatches`. The rules give full
+profile reads and messaging to verified users and the optional group (`hasFullAccess()`).
 
 ## Project layout
 
