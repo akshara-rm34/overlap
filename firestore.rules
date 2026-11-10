@@ -12,9 +12,15 @@ service cloud.firestore {
       return signedIn() && request.auth.uid == uid;
     }
 
-    function amVerified() {
+    function me() {
+      return get(/databases/$(database)/documents/users/$(request.auth.uid)).data;
+    }
+
+    // Full access = open full profiles and message. Verified users have it, and so does
+    // everyone in the optional-verification group of the Sprint 4 A/B test.
+    function hasFullAccess() {
       return signedIn()
-        && get(/databases/$(database)/documents/users/$(request.auth.uid)).data.get('verified', false) == true;
+        && (me().get('verified', false) == true || me().get('variant', null) == 'optional');
     }
 
     function isYmd(v) {
@@ -25,7 +31,7 @@ service cloud.firestore {
 
     // Only the server (Cloud Functions / Admin SDK) writes these.
     function serverOnlyFields() {
-      return ['verified', 'verificationMethod', 'company', 'verifiedAt', 'participantId'];
+      return ['verified', 'verificationMethod', 'company', 'verifiedAt', 'participantId', 'variant'];
     }
 
     function validChecklist(c) {
@@ -46,7 +52,7 @@ service cloud.firestore {
       return d.keys().hasOnly([
           'displayName', 'participantId', 'city', 'startDate', 'endDate', 'budgetMin', 'budgetMax',
           'bio', 'verified', 'verificationMethod', 'company', 'verifiedAt', 'checklist',
-          'checklistCompletedAt', 'createdAt', 'updatedAt'])
+          'checklistCompletedAt', 'housingStatus', 'variant', 'createdAt', 'updatedAt'])
         && d.displayName is string && d.displayName.size() > 0 && d.displayName.size() <= 50
         && (!('city' in d) || (d.city is string && d.city.size() <= 60))
         && (!('startDate' in d) || isYmd(d.startDate))
@@ -54,12 +60,14 @@ service cloud.firestore {
         && (!('budgetMin' in d) || (d.budgetMin is number && d.budgetMin >= 0 && d.budgetMin <= 100000))
         && (!('budgetMax' in d) || (d.budgetMax is number && d.budgetMax >= d.budgetMin && d.budgetMax <= 100000))
         && (!('bio' in d) || (d.bio is string && d.bio.size() <= 280))
+        && (!('housingStatus' in d) || d.housingStatus in ['search_together', 'have_place', 'either'])
         && validChecklist(d.get('checklist', null));
     }
 
     match /users/{uid} {
-      // Your own profile, or anyone's if you're verified.
-      allow get: if isMe(uid) || amVerified();
+      // Your own profile, or anyone's if you have full access. Users who are still verifying
+      // see the limited card copied into their match docs instead.
+      allow get: if isMe(uid) || hasFullAccess();
 
       allow create: if isMe(uid)
         && validProfile(request.resource.data)
@@ -67,7 +75,8 @@ service cloud.firestore {
         && request.resource.data.verificationMethod == null
         && request.resource.data.company == null
         && request.resource.data.verifiedAt == null
-        && request.resource.data.participantId == null;
+        && request.resource.data.participantId == null
+        && request.resource.data.get('variant', null) == null;
 
       allow update: if isMe(uid)
         && validProfile(request.resource.data)
@@ -111,8 +120,9 @@ service cloud.firestore {
       allow get: if inConv(convId);
       allow list: if signedIn() && request.auth.uid in resource.data.participants;
 
-      // Only people who are matched can start a conversation.
+      // Only matched people with full access can start a conversation.
       allow create: if inConv(convId)
+        && hasFullAccess()
         && request.resource.data.keys().hasOnly(
             ['participants', 'overlapType', 'createdBy', 'createdAt', 'lastMessageAt',
              'lastMessageText', 'lastSenderId', 'updatedAt'])
@@ -133,6 +143,7 @@ service cloud.firestore {
       match /messages/{msgId} {
         allow read: if inConv(convId);
         allow create: if inConv(convId)
+          && hasFullAccess()
           && existsAfter(/databases/$(database)/documents/conversations/$(convId))
           && request.resource.data.keys().hasOnly(['senderId', 'text', 'sentAt'])
           && request.resource.data.senderId == request.auth.uid
@@ -146,13 +157,15 @@ service cloud.firestore {
     // ---------- events: create-only study log ----------
 
     match /events/{eventId} {
-      // verify_completed is logged by the server, so the app can't fake it.
+      // verify_completed, variant_assigned, and letter_reviewed are logged by the server, so the
+      // app can't fake them.
       allow create: if signedIn()
         && request.resource.data.keys().hasOnly(['uid', 'name', 'props', 'ts'])
         && request.resource.data.uid == request.auth.uid
         && request.resource.data.name in [
-            'signup', 'verify_started', 'search', 'match_shown', 'profile_view', 'badge_tap',
-            'message_sent', 'checklist_started', 'checklist_completed']
+            'signup', 'verify_started', 'verify_skipped', 'search', 'feed_left', 'match_shown',
+            'profile_view', 'badge_tap', 'locked_message_tap', 'suggestion_shown', 'message_sent',
+            'checklist_started', 'checklist_completed', 'code_fallback_shown', 'code_fallback_tap']
         && request.resource.data.props is map
         && request.resource.data.ts == request.time;
     }

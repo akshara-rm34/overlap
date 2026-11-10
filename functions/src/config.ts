@@ -42,7 +42,13 @@ export const VERIFICATION = {
   maxSendsPerHour: 3,
 };
 
-// Used by computeMatches (step 4).
+// Sprint 4 A/B test. New sign-ups alternate between the two groups.
+//   required: verify before opening full profiles or messaging (can browse limited match cards)
+//   optional: full access right away; verifying adds a badge
+export const VARIANTS = ['required', 'optional'] as const;
+export type Variant = (typeof VARIANTS)[number];
+
+// Used by computeMatches.
 export const MATCHING = {
   fullOverlapShare: 0.8, // full = overlap is at least 80% of the shorter stay
   minPartialDays: 14,

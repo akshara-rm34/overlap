@@ -2,7 +2,7 @@ import { FieldValue, getFirestore, type Transaction } from 'firebase-admin/fires
 
 // Server-side events (same shape as the app's logEvent).
 export function logServerEvent(
-  name: 'verify_completed',
+  name: 'verify_completed' | 'variant_assigned' | 'letter_reviewed',
   uid: string,
   props: Record<string, unknown>,
   tx?: Transaction,
