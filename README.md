@@ -88,6 +88,9 @@ npm run export-events      # writes exports/events-<date>.csv (git-ignored)
 npm run delete-test-data -- --yes   # after the sprint: deletes every account and all data
 ```
 
+Both scripts skip events from before `STUDY_START` in `scripts/lib/admin.ts` (the day Sprint 4
+testing started), so dry runs don't count. Add `-- --since all` or `-- --since 2026-10-01` to change that.
+
 The export replaces uids with participant ids (P01, P02, ... in sign-up order), including the
 uids inside `otherUid` and `convId`. Each user's id is saved on their profile, so it stays the
 same across exports. Add `--include-team` to either script to count admin accounts.
