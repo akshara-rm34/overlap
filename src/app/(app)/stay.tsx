@@ -4,11 +4,12 @@ import { StyleSheet, Text, View } from 'react-native';
 
 import { Button } from '@/components/Button';
 import { DateField } from '@/components/DateField';
+import { OptionGroup } from '@/components/OptionGroup';
 import { CityField } from '@/components/CityField';
 import { Screen } from '@/components/Screen';
 import { TextField } from '@/components/TextField';
 import { isKnownCity } from '@/lib/cities';
-import { BIO_MAX, saveStay, useProfile } from '@/lib/profile';
+import { BIO_MAX, HOUSING_OPTIONS, saveStay, useProfile, type HousingStatus } from '@/lib/profile';
 import { colors, space, type } from '@/lib/theme';
 
 function parseDollars(s: string): number {
@@ -26,6 +27,9 @@ export default function StayScreen() {
   const [endDate, setEndDate] = useState<string | null>(profile?.endDate ?? null);
   const [budgetMin, setBudgetMin] = useState(profile?.budgetMin ? String(profile.budgetMin) : '');
   const [budgetMax, setBudgetMax] = useState(profile?.budgetMax ? String(profile.budgetMax) : '');
+  const [housingStatus, setHousingStatus] = useState<HousingStatus | null>(
+    profile?.housingStatus ?? null,
+  );
   const [bio, setBio] = useState(profile?.bio ?? '');
   const [error, setError] = useState<string | null>(null);
   const [busy, setBusy] = useState(false);
@@ -38,6 +42,7 @@ export default function StayScreen() {
     const max = parseDollars(budgetMax);
     if (!min || !max) return 'Add your monthly budget range.';
     if (min > max) return 'The lower budget can’t be more than the higher one.';
+    if (!housingStatus) return 'Pick your housing situation.';
     return null;
   }
 
@@ -56,6 +61,7 @@ export default function StayScreen() {
         endDate: endDate!,
         budgetMin: parseDollars(budgetMin),
         budgetMax: parseDollars(budgetMax),
+        housingStatus: housingStatus!,
         bio: bio.trim(),
       });
       if (editing) router.back();
@@ -107,6 +113,13 @@ export default function StayScreen() {
           />
         </View>
       </View>
+
+      <OptionGroup
+        label="Housing situation"
+        options={HOUSING_OPTIONS}
+        value={housingStatus}
+        onChange={setHousingStatus}
+      />
 
       <TextField
         label="About you (optional)"

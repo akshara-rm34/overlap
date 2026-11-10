@@ -8,7 +8,7 @@ import { VerifiedPill } from '@/components/VerifiedPill';
 import { signOut } from '@/lib/auth';
 import { QUESTIONS, answerSummary } from '@/lib/checklist';
 import { formatDate } from '@/lib/dates';
-import { useProfile } from '@/lib/profile';
+import { housingSummary, useProfile } from '@/lib/profile';
 import { colors, fonts, radius, space, type } from '@/lib/theme';
 import { listOfferLetters } from '@/lib/verification';
 
@@ -66,15 +66,18 @@ export default function MyProfile() {
       <View style={styles.status}>
         {profile.verified ? (
           <>
-            <VerifiedPill />
+            <VerifiedPill method={profile.verificationMethod} />
             {profile.company && <Text style={type.body}>{profile.company}</Text>}
           </>
         ) : offerLetterStatus === 'pending' ? (
           <Text style={type.body}>Offer letter pending review</Text>
         ) : (
-          <Pressable onPress={() => router.push('/verify')}>
-            <Text style={type.link}>Not verified yet. Verify your work email</Text>
-          </Pressable>
+          <>
+            <VerifiedPill method={null} />
+            <Pressable onPress={() => router.push('/verify')}>
+              <Text style={type.link}>Get verified</Text>
+            </Pressable>
+          </>
         )}
       </View>
 
@@ -92,6 +95,7 @@ export default function MyProfile() {
               label="Budget"
               value={`${money(profile.budgetMin!)}–${money(profile.budgetMax!)}/mo`}
             />
+            <Row label="Housing" value={housingSummary(profile.housingStatus) ?? 'Not set'} />
           </View>
         ) : (
           <Text style={type.body}>Not set yet.</Text>

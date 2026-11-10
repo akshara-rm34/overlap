@@ -16,9 +16,11 @@ import { SafeAreaView } from 'react-native-safe-area-context';
 import { Loading } from '@/components/Loading';
 import { OverlapPill } from '@/components/OverlapPill';
 import { useAuth } from '@/lib/auth';
-import { logEvent } from '@/lib/events';
+import { logEvent, type SuggestionUse } from '@/lib/events';
 import { MESSAGE_MAX, otherUidIn, sendMessage, useConversation, type Message } from '@/lib/chat';
 import { useMatch } from '@/lib/matches';
+import { useProfile } from '@/lib/profile';
+import { suggestedMessage } from '@/lib/suggestion';
 import { colors, fonts, radius, space, type } from '@/lib/theme';
 import { useUserProfile } from '@/lib/useUserProfile';
 
@@ -45,7 +47,11 @@ export default function Chat() {
   const other = useUserProfile(otherUid);
   const match = useMatch(otherUid);
   const { conv, messages } = useConversation(convId);
+  const { profile: myProfile } = useProfile();
   const [text, setText] = useState('');
+  // The suggestion the user tapped "Use this" on, to tell unedited from edited sends.
+  const [usedSuggestion, setUsedSuggestion] = useState<string | null>(null);
+  const suggestionLogged = useRef(false);
   const [sending, setSending] = useState(false);
   const [error, setError] = useState<string | null>(null);
   const listRef = useRef<FlatList<Message>>(null);
@@ -53,6 +59,16 @@ export default function Chat() {
   useEffect(() => {
     if (messages?.length) setTimeout(() => listRef.current?.scrollToEnd({ animated: true }), 50);
   }, [messages?.length]);
+
+  // Offer a suggested first message only to whoever starts the conversation.
+  const suggestion =
+    messages && messages.length === 0 && !conv && match ? suggestedMessage(myProfile, match) : null;
+
+  useEffect(() => {
+    if (!suggestion || suggestionLogged.current) return;
+    suggestionLogged.current = true;
+    logEvent('suggestion_shown', { convId, otherUid });
+  }, [suggestion, convId, otherUid]);
 
   if (conv === undefined || messages === null || other === undefined || match === undefined) {
     return <Loading />;
@@ -67,6 +83,13 @@ export default function Chat() {
     setError(null);
     setSending(true);
     const draft = text;
+    const suggestionUse: SuggestionUse = !usedSuggestion
+      ? 'none'
+      : draft.trim() === usedSuggestion.trim()
+        ? 'unedited'
+        : 'edited';
+    const mineBefore = messages!.filter((x) => x.senderId === me).length;
+    const theirsBefore = messages!.length - mineBefore;
     setText('');
     try {
       await sendMessage({
@@ -80,8 +103,11 @@ export default function Chat() {
         otherUid,
         overlapType: overlapType ?? null,
         isFirstInConversation: !conv,
-        messageCount: messages!.filter((x) => x.senderId === me).length + 1,
+        messageCount: mineBefore + 1,
+        isReply: mineBefore === 0 && theirsBefore > 0,
+        suggestion: suggestionUse,
       });
+      setUsedSuggestion(null);
     } catch {
       setText(draft);
       setError('Message didn’t send. Try again.');
@@ -127,6 +153,20 @@ export default function Chat() {
           }
         />
         {error && <Text style={[type.error, styles.error]}>{error}</Text>}
+        {suggestion && !text && (
+          <View style={styles.suggestion}>
+            <Text style={type.small}>Suggested first message</Text>
+            <Text style={styles.suggestionText}>{suggestion}</Text>
+            <Pressable
+              onPress={() => {
+                setText(suggestion);
+                setUsedSuggestion(suggestion);
+              }}
+              hitSlop={6}>
+              <Text style={type.link}>Use this</Text>
+            </Pressable>
+          </View>
+        )}
         {canStart && (
           <View style={styles.composer}>
             <TextInput
@@ -177,6 +217,15 @@ const styles = StyleSheet.create({
   mineText: { color: colors.primaryText },
   time: { marginTop: 3, fontSize: 11 },
   error: { paddingHorizontal: 16, paddingBottom: space.xs },
+  suggestion: {
+    marginHorizontal: 12,
+    marginBottom: 8,
+    padding: 12,
+    borderRadius: radius,
+    backgroundColor: colors.card,
+    gap: 6,
+  },
+  suggestionText: { fontFamily: fonts.regular, fontSize: 14, lineHeight: 20, color: colors.text },
   composer: {
     flexDirection: 'row',
     alignItems: 'flex-end',

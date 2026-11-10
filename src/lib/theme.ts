@@ -16,6 +16,12 @@ export const colors = {
   greenSolid: '#009966',
   greenBg: '#ECFDF5',
   greenBorder: '#A4F4CF',
+  blue: '#1D4ED8',
+  blueBg: '#EFF6FF',
+  blueBorder: '#BFDBFE',
+  amberBg: '#FFFBEB',
+  amberBorder: '#FDE68A',
+  amber: '#92400E',
   error: '#B91C1C',
 };
 

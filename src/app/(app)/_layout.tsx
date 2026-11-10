@@ -4,19 +4,26 @@ import { Loading } from '@/components/Loading';
 import { ProfileProvider, useProfile } from '@/lib/profile';
 
 function AppStack() {
-  const { profile, offerLetterStatus, loading, verifySkipped } = useProfile();
+  const { profile, offerLetterStatus, loading, verifySkipped, variant } = useProfile();
   if (loading) return <Loading />;
 
   // Verify screens close once the user is verified or has an offer letter pending.
-  // Unverified users see them first, but can skip and come back from home.
+  // Required group: unverified users see them first, but can skip and browse limited matches.
+  // Optional group: they go straight into the app and can verify later for a badge.
   const canVerify = !profile?.verified && offerLetterStatus !== 'pending';
-  const canUseApp = !canVerify || verifySkipped;
+  const verifyFirst = variant === 'required';
+  const canUseApp = !canVerify || verifySkipped || !verifyFirst;
+
+  // The first screen allowed by its guard is where the user lands.
+  const verify = (
+    <Stack.Protected guard={canVerify}>
+      <Stack.Screen name="verify" />
+    </Stack.Protected>
+  );
 
   return (
     <Stack screenOptions={{ headerShown: false }}>
-      <Stack.Protected guard={canVerify}>
-        <Stack.Screen name="verify" />
-      </Stack.Protected>
+      {verifyFirst && verify}
       <Stack.Protected guard={canUseApp}>
         <Stack.Screen name="index" />
         <Stack.Screen name="stay" />
@@ -27,6 +34,7 @@ function AppStack() {
         <Stack.Screen name="chat/[convId]" />
         <Stack.Screen name="admin" />
       </Stack.Protected>
+      {!verifyFirst && verify}
     </Stack>
   );
 }

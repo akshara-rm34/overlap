@@ -1,5 +1,5 @@
 import { router, useLocalSearchParams } from 'expo-router';
-import { useEffect, useState } from 'react';
+import { useEffect, useRef, useState } from 'react';
 import { Pressable, StyleSheet, Text, View } from 'react-native';
 
 import { Button } from '@/components/Button';
@@ -14,6 +14,9 @@ import {
 } from '@/lib/verification';
 
 const RESEND_WAIT_SECONDS = 30;
+// After this long without a successful code, offer the offer letter route (F20). In Sprint 3,
+// P08 never got a code from our Gmail sender and gave up.
+const FALLBACK_AFTER_SECONDS = 45;
 
 export default function EnterCode() {
   const params = useLocalSearchParams<{ email: string; devCode?: string }>();
@@ -24,6 +27,24 @@ export default function EnterCode() {
   const [notice, setNotice] = useState<string | null>(null);
   const [busy, setBusy] = useState(false);
   const [wait, setWait] = useState(RESEND_WAIT_SECONDS);
+  const openedAt = useRef(0);
+  const [showFallback, setShowFallback] = useState(false);
+
+  useEffect(() => {
+    openedAt.current = Date.now();
+    const t = setTimeout(() => {
+      setShowFallback(true);
+      logEvent('code_fallback_shown', { secondsWaited: FALLBACK_AFTER_SECONDS });
+    }, FALLBACK_AFTER_SECONDS * 1000);
+    return () => clearTimeout(t);
+  }, []);
+
+  function onFallback() {
+    logEvent('code_fallback_tap', {
+      secondsWaited: Math.round((Date.now() - openedAt.current) / 1000),
+    });
+    router.replace('/verify/offer-letter');
+  }
 
   useEffect(() => {
     if (wait <= 0) return;
@@ -90,15 +111,28 @@ export default function EnterCode() {
       {error && <Text style={[type.error, styles.msg]}>{error}</Text>}
       {notice && <Text style={[type.text, styles.msg]}>{notice}</Text>}
       <Text style={type.small}>The code expires in 10 minutes.</Text>
+      {showFallback && (
+        <View style={styles.fallback}>
+          <Text style={type.h2}>No code yet?</Text>
+          <Text style={type.body}>
+            Some company email systems hold or filter emails from outside senders, especially
+            before your start date. Check your spam or quarantine folder, or verify with your offer
+            letter instead.
+          </Text>
+          <Button title="Use my offer letter" variant="secondary" onPress={onFallback} />
+        </View>
+      )}
       <View style={styles.links}>
         <Pressable onPress={onResend} disabled={wait > 0} hitSlop={6}>
           <Text style={[type.link, wait > 0 && styles.disabled]}>
             {wait > 0 ? `Send a new code in ${wait}s` : 'Send a new code'}
           </Text>
         </Pressable>
-        <Pressable onPress={() => router.replace('/verify/offer-letter')} hitSlop={6}>
-          <Text style={type.link}>I don’t have a work email yet</Text>
-        </Pressable>
+        {!showFallback && (
+          <Pressable onPress={() => router.replace('/verify/offer-letter')} hitSlop={6}>
+            <Text style={type.link}>I don’t have a work email yet</Text>
+          </Pressable>
+        )}
       </View>
     </Screen>
   );
@@ -127,6 +161,15 @@ const styles = StyleSheet.create({
   },
   codeInput: { letterSpacing: 6, fontFamily: fonts.semibold, fontSize: 18 },
   msg: { marginBottom: space.sm },
+  fallback: {
+    backgroundColor: colors.amberBg,
+    borderWidth: 1,
+    borderColor: colors.amberBorder,
+    borderRadius: radius,
+    padding: space.md,
+    gap: space.sm,
+    marginTop: space.md,
+  },
   links: { marginTop: space.lg, gap: space.md, alignItems: 'flex-start' },
   disabled: { color: colors.faint, textDecorationLine: 'none' },
 });
