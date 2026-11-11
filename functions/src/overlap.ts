@@ -31,3 +31,14 @@ export function computeOverlap(a: Stay, b: Stay): Overlap | null {
   const overlapType = overlapDays >= MATCHING.fullOverlapShare * shorter ? 'full' : 'partial';
   return { overlapType, overlapDays, overlapStart, overlapEnd };
 }
+
+export type Budget = { budgetMin?: number; budgetMax?: number };
+export type BudgetFit = 'fits' | 'no_overlap' | 'unknown';
+
+// "fits" when the two monthly budget ranges share at least one dollar amount.
+export function budgetFit(a: Budget, b: Budget): BudgetFit {
+  if (a.budgetMin == null || a.budgetMax == null || b.budgetMin == null || b.budgetMax == null) {
+    return 'unknown';
+  }
+  return a.budgetMin <= b.budgetMax && b.budgetMin <= a.budgetMax ? 'fits' : 'no_overlap';
+}

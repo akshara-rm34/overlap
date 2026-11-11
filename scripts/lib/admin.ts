@@ -54,9 +54,17 @@ export type EventDoc = {
   ts: Timestamp | null;
 };
 
+// Events before the current sprint's test started (dry runs, earlier sprints) are left out.
+// Override with --since YYYY-MM-DD, or --since all.
+export const STUDY_START = '2026-11-10';
+
 export async function loadEvents(): Promise<EventDoc[]> {
+  const since = option('since') ?? STUDY_START;
   const snap = await db.collection('events').orderBy('ts').get();
-  return snap.docs.map((d) => d.data() as EventDoc);
+  const events = snap.docs.map((d) => d.data() as EventDoc);
+  if (since === 'all') return events;
+  const from = new Date(`${since}T00:00:00`).getTime();
+  return events.filter((e) => (e.ts?.toMillis() ?? 0) >= from);
 }
 
 // Team accounts (the admin list in functions/src/config.ts) are left out unless --include-team.

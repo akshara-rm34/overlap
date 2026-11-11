@@ -15,9 +15,16 @@ export default function VerifyEmail() {
   const [email, setEmail] = useState('');
   const [error, setError] = useState<string | null>(null);
   const [busy, setBusy] = useState(false);
-  const { skipVerify, offerLetterStatus } = useProfile();
+  const { skipVerify, offerLetterStatus, variant } = useProfile();
+  // Optional group: verify is opened from the app, so "skip" just goes back.
+  const optional = variant === 'optional';
 
   function onSkip() {
+    if (optional) {
+      router.back();
+      return;
+    }
+    logEvent('verify_skipped', {});
     skipVerify();
     router.replace('/');
   }
@@ -53,14 +60,16 @@ export default function VerifyEmail() {
             disabled={!email.trim()}
           />
           <Pressable onPress={onSkip} style={styles.skip}>
-            <Text style={type.link}>Skip for now</Text>
+            <Text style={type.link}>{optional ? 'Not now' : 'Browse matches first'}</Text>
             <Text style={[type.small, styles.skipNote]}>
-              You can set up your profile, but you won’t see matches until you verify.
+              {optional
+                ? 'You can keep using Overlap. Your profile shows Not verified until you do this.'
+                : 'You can see who matches your dates, but you’ll need to verify to open full profiles and send messages.'}
             </Text>
           </Pressable>
         </>
       }>
-      <Text style={type.h1}>Verify your work email</Text>
+      <Text style={type.h1}>{optional ? 'Get a verified badge' : 'Verify your work email'}</Text>
       <Text style={[type.body, styles.intro]}>
         Confirm that you’re relocating for a real internship or job before connecting with
         roommates. Your profile shows your company name, never your email.

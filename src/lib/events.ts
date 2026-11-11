@@ -1,25 +1,51 @@
 import { addDoc, collection, serverTimestamp } from 'firebase/firestore';
 
 import { auth, db } from './firebase';
-import type { OverlapType } from './matches';
+import type { BudgetFit, OverlapType } from './matches';
+import type { Access, VerificationMethod } from './profile';
 
-// Every event the app logs, with its props. verify_completed is logged by the server.
+// How a first message related to the suggested one (F22).
+//   unedited: sent as suggested. edited: started from the suggestion, then changed. none: typed.
+export type SuggestionUse = 'unedited' | 'edited' | 'none';
+
+// Every event the app logs, with its props. verify_completed, variant_assigned, and
+// letter_reviewed are logged by the server.
 type EventProps = {
   signup: Record<string, never>;
-  verify_started: { method: 'work_email' | 'offer_letter' };
-  search: { city: string };
-  match_shown: { otherUid: string; overlapType: OverlapType; overlapDays: number };
-  profile_view: { otherUid: string; overlapType: OverlapType | null };
-  badge_tap: { otherUid: string };
+  verify_started: { method: VerificationMethod };
+  // Required group only: "Browse matches while you verify".
+  verify_skipped: Record<string, never>;
+  // Matches screen opened, once the list has loaded. matchCount 0 = a zero-match search.
+  search: { city: string; matchCount: number; access: Access };
+  // Matches screen closed or left. durationMs = time spent on the list.
+  feed_left: { durationMs: number; access: Access };
+  match_shown: {
+    otherUid: string;
+    overlapType: OverlapType;
+    overlapDays: number;
+    budgetFit: BudgetFit;
+    access: Access;
+  };
+  profile_view: { otherUid: string; overlapType: OverlapType | null; access: Access };
+  badge_tap: { otherUid: string; method: VerificationMethod | null };
+  // A user with limited access tapped Message.
+  locked_message_tap: { otherUid: string };
+  suggestion_shown: { convId: string; otherUid: string };
   message_sent: {
     convId: string;
     otherUid: string;
     overlapType: OverlapType | null;
     isFirstInConversation: boolean;
     messageCount: number; // messages this user has sent in this conversation, including this one
+    // True when the other person has already written and this is this user's first message.
+    isReply: boolean;
+    suggestion: SuggestionUse;
   };
   checklist_started: Record<string, never>;
   checklist_completed: Record<string, never>;
+  // The "no code yet?" card on the code screen (F20).
+  code_fallback_shown: { secondsWaited: number };
+  code_fallback_tap: { secondsWaited: number };
 };
 
 export type EventName = keyof EventProps;

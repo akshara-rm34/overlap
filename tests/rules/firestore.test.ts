@@ -24,7 +24,9 @@ import {
 import { checklist, newProfile, stay, testEnv } from './setup.ts';
 
 let env: RulesTestEnvironment;
-// alice and bob are verified and matched. carol is verified, not matched. dan is unverified.
+// alice and bob are verified and matched. carol is verified, not matched.
+// dan is unverified in the required group (Sprint 4 A/B test) and can see alice as a match.
+// olive is unverified in the optional group and matched with alice.
 const db = (uid: string | null) =>
   (uid
     ? env.authenticatedContext(uid)
@@ -56,6 +58,11 @@ beforeEach(async () => {
         company: verified ? 'Acme' : null,
       });
     }
+    await setDoc(doc(admin, 'users', 'olive'), {
+      ...newProfile('olive'),
+      ...stay,
+      variant: 'optional',
+    });
     const match = {
       overlapType: 'full',
       overlapDays: 82,
@@ -64,6 +71,9 @@ beforeEach(async () => {
     };
     await setDoc(doc(admin, 'matches/alice/items/bob'), { otherUid: 'bob', ...match });
     await setDoc(doc(admin, 'matches/bob/items/alice'), { otherUid: 'alice', ...match });
+    await setDoc(doc(admin, 'matches/dan/items/alice'), { otherUid: 'alice', ...match });
+    await setDoc(doc(admin, 'matches/olive/items/alice'), { otherUid: 'alice', ...match });
+    await setDoc(doc(admin, 'matches/alice/items/olive'), { otherUid: 'olive', ...match });
     await setDoc(doc(admin, 'verificationCodes/alice'), { codeHash: 'x', attempts: 0 });
     await setDoc(doc(admin, 'private/alice'), {
       workEmail: 'alice@acme.com',
@@ -130,6 +140,9 @@ describe('users', () => {
   it('verified users can read other profiles', async () => {
     await assertSucceeds(getDoc(doc(db('alice'), 'users/dan')));
   });
+  it('unverified users in the optional group can read other profiles', async () => {
+    await assertSucceeds(getDoc(doc(db('olive'), 'users/alice')));
+  });
   it('nobody can list all users', async () => {
     await assertFails(getDocs(collection(db('alice'), 'users')));
   });
@@ -141,12 +154,22 @@ describe('users', () => {
       setDoc(doc(db('erin'), 'users/erin'), { ...newProfile('Erin'), verified: true }),
     );
   });
+  it('sign-up cannot pick its own A/B group', async () => {
+    await assertFails(
+      setDoc(doc(db('erin'), 'users/erin'), { ...newProfile('Erin'), variant: 'optional' }),
+    );
+  });
   it('cannot create someone else’s profile', async () => {
     await assertFails(setDoc(doc(db('erin'), 'users/frank'), newProfile('Frank')));
   });
-  it('owner can update stay and checklist', async () => {
+  it('owner can update stay, housing status, and checklist', async () => {
     await assertSucceeds(
-      updateDoc(doc(db('dan'), 'users/dan'), { ...stay, city: 'Seattle, WA', checklist }),
+      updateDoc(doc(db('dan'), 'users/dan'), {
+        ...stay,
+        city: 'Seattle, WA',
+        housingStatus: 'have_place',
+        checklist,
+      }),
     );
   });
   it('owner cannot change server-only fields', async () => {
@@ -156,6 +179,7 @@ describe('users', () => {
       'company',
       'verifiedAt',
       'participantId',
+      'variant',
     ]) {
       await assertFails(
         updateDoc(doc(db('dan'), 'users/dan'), { [field]: field === 'verified' ? true : 'x' }),
@@ -171,6 +195,7 @@ describe('users', () => {
     await assertFails(updateDoc(ref, { endDate: '2027-06-01' })); // before start
     await assertFails(updateDoc(ref, { budgetMin: 5000 })); // above max
     await assertFails(updateDoc(ref, { bio: 'x'.repeat(281) }));
+    await assertFails(updateDoc(ref, { housingStatus: 'castle' }));
     await assertFails(updateDoc(ref, { somethingElse: true }));
   });
   it('rejects bad checklist answers', async () => {
@@ -254,6 +279,12 @@ describe('conversations', () => {
   it('overlapType must match the match', async () => {
     await assertFails(startConv('alice', { overlapType: 'partial' }));
   });
+  it('unverified users in the required group cannot start one, even with a match', async () => {
+    await assertFails(startConv('dan', {}, ['alice', 'dan'].sort().join('_')));
+  });
+  it('unverified users in the optional group can start one', async () => {
+    await assertSucceeds(startConv('olive', {}, ['alice', 'olive'].sort().join('_')));
+  });
   it('unmatched users cannot start one', async () => {
     await assertFails(startConv('carol', {}, ['alice', 'carol'].sort().join('_')));
   });
@@ -318,8 +349,22 @@ describe('events', () => {
   it('cannot log as someone else', async () => {
     await assertFails(addDoc(collection(db('alice'), 'events'), ev('bob')));
   });
-  it('cannot fake verify_completed or unknown events', async () => {
-    await assertFails(addDoc(collection(db('alice'), 'events'), ev('alice', 'verify_completed')));
+  it('can log the Sprint 4 events', async () => {
+    for (const name of [
+      'verify_skipped',
+      'feed_left',
+      'locked_message_tap',
+      'suggestion_shown',
+      'code_fallback_shown',
+      'code_fallback_tap',
+    ]) {
+      await assertSucceeds(addDoc(collection(db('alice'), 'events'), ev('alice', name)));
+    }
+  });
+  it('cannot fake server events or unknown events', async () => {
+    for (const name of ['verify_completed', 'variant_assigned', 'letter_reviewed']) {
+      await assertFails(addDoc(collection(db('alice'), 'events'), ev('alice', name)));
+    }
     await assertFails(addDoc(collection(db('alice'), 'events'), ev('alice', 'made_up')));
   });
   it('rejects extra fields and client timestamps', async () => {

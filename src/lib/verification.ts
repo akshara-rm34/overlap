@@ -61,26 +61,49 @@ export type PendingLetter = {
   displayName: string;
   path: string;
   uploadedAt: string | null;
+  city: string | null;
+  startDate: string | null;
+  endDate: string | null;
 };
+
+// What the reviewer checks by hand. Unchecked items are sent as mismatches and logged, to show
+// what an automated pre-check would need to flag. Keep in sync with functions/src/offerLetters.ts.
+export const LETTER_CHECKS = [
+  { key: 'name', label: 'Name matches their profile' },
+  { key: 'company', label: 'Company is named' },
+  { key: 'role', label: 'Role or position is named' },
+  { key: 'city', label: 'Work location matches their city' },
+  { key: 'dates', label: 'Start/end dates fit their stay' },
+  { key: 'not_edited', label: 'No signs of editing' },
+] as const;
+export type LetterCheck = (typeof LETTER_CHECKS)[number]['key'];
 
 const listLettersFn = httpsCallable<void, { letters: PendingLetter[] }>(
   functions,
   'listOfferLetters',
 );
-const approveLetterFn = httpsCallable<{ uid: string; company: string }, { ok: true }>(
+const approveLetterFn = httpsCallable<
+  { uid: string; company: string; mismatches: LetterCheck[]; handsOnSeconds: number | null },
+  { ok: true }
+>(functions, 'approveOfferLetter');
+const rejectLetterFn = httpsCallable<
+  { uid: string; mismatches: LetterCheck[]; handsOnSeconds: number | null },
+  { ok: true }
+>(
   functions,
-  'approveOfferLetter',
+  'rejectOfferLetter',
 );
-const rejectLetterFn = httpsCallable<{ uid: string }, { ok: true }>(functions, 'rejectOfferLetter');
 
 export async function listOfferLetters() {
   return (await listLettersFn()).data.letters;
 }
 
-export async function approveOfferLetter(uid: string, company: string) {
-  await approveLetterFn({ uid, company });
+type Review = { mismatches: LetterCheck[]; handsOnSeconds: number | null };
+
+export async function approveOfferLetter(uid: string, company: string, review: Review) {
+  await approveLetterFn({ uid, company, ...review });
 }
 
-export async function rejectOfferLetter(uid: string) {
-  await rejectLetterFn({ uid });
+export async function rejectOfferLetter(uid: string, review: Review) {
+  await rejectLetterFn({ uid, ...review });
 }

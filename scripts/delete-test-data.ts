@@ -6,7 +6,15 @@
 
 import { auth, bucket, db, describeTarget, flag } from './lib/admin.ts';
 
-const COLLECTIONS = ['users', 'private', 'verificationCodes', 'matches', 'conversations', 'events'];
+const COLLECTIONS = [
+  'users',
+  'private',
+  'verificationCodes',
+  'matches',
+  'conversations',
+  'events',
+  'meta', // A/B group counter
+];
 
 if (!flag('yes')) {
   console.log(`This deletes every account and all data in ${describeTarget()}.`);
